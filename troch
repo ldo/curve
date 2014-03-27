@@ -13,6 +13,8 @@
 #         specifies how to do the drawing:
 #             turtle     -- draw onscreen using Turtle graphics.
 #             postscript -- output PostScript drawing commands to standard output.
+#     --speed=speed
+#         speed of turtle movement (ignored for PostScript output)
 #
 # Each curvespec specifies the parameters for a curve to draw, and takes the form
 #
@@ -57,6 +59,9 @@ class Drawer :
 #+
 # Subclasses should define the following methods:
 #
+# speed(v)
+#     sets speed of drawing
+#
 # pensize(w)
 #     sets the pensize for subsequent drawing to w.
 #
@@ -96,6 +101,15 @@ class TurtleDrawer(Drawer) :
         self.done = turtle.exitonclick
     #end __init__
 
+    def speed(self, newspeed) :
+        try :
+            speedval = int(newspeed)
+        except ValueError :
+            speedval = newspeed
+        #end try
+        self.t.speed(speedval)
+    #end speed
+
 #end TurtleDrawer
 
 class PostScriptDrawer(Drawer) :
@@ -130,6 +144,10 @@ class PostScriptDrawer(Drawer) :
             "translate\n" # move origin to centre
           )
     #end __init__
+
+    def speed(self, newspeed) :
+        pass
+    #end speed
 
     def pensize(self, newsize) :
         self.finishpath()
@@ -210,16 +228,22 @@ drawtypes = \
   (
     sys.argv[1:],
     "",
-    ["draw="]
+    ["draw=", "speed="]
   )
 drawtype = None
+speed = None
 for keyword, value in opts :
     if keyword == "--draw" :
         drawtype = drawtypes[value]
+    elif keyword == "--speed" :
+        speed = value
     #end if
 #end for
 
 t = drawtype()
+if speed != None :
+    t.speed(speed)
+#end if
 for arg in args :
     # note pen_color and pen_size default to settings for previous curve, if any
     pen_color = None
