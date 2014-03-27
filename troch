@@ -7,23 +7,20 @@
 #
 #     troch [options] curvespec [curvespec...]
 #
-# where the valid options are
+# where the only valid option is
 #
-#     --draw=drawtype
+#     --draw=drawtype (required)
 #         specifies how to do the drawing:
 #             turtle     -- draw onscreen using Turtle graphics.
-#             postscript -- output PostScript drawing commands.
-#     --pause=n
-#         specifies how many seconds to pause after the drawing all the curves,
-#         before closing the turtle window and existing.
+#             postscript -- output PostScript drawing commands to standard output.
 #
 # Each curvespec specifies the parameters for a curve to draw, and takes the form
 #
-#     keyword=value,keyword=value...
+#     keyword=value:keyword=value...
 #
 # where the valid keywords are
 #
-#     color
+#     pencolor
 #         specifies the pen colour to use to draw the curve. Defaults to the
 #         same as the previous curve, or black for the first curve.
 #     pensize
@@ -47,7 +44,6 @@
 import sys
 from fractions import \
     Fraction
-import time
 import turtle
 from turtle import \
     Vec2D
@@ -58,7 +54,31 @@ import getopt
 #-
 
 class Drawer :
+#+
+# Subclasses should define the following methods:
+#
+# pensize(w)
+#     sets the pensize for subsequent drawing to w.
+#
+# pencolor(c)
+#     sets the pen colour for subsequent to c, which can be an X11 colour name, or a tuple
+#     of 3 values (r, g, b) in [0 .. 255], or 3 separate args r, g, b in [0 .. 255].
+#
+# penup()
+#     stops subsequent pen movements from drawing any lines.
+#
+# pendown()
+#     resumes drawing lines on subsequent pen movements.
+#
+# setpos(p)
+#     moves the pen to the specified position, which can be a Vec2D, or 2 separate x and y
+#     arguments.
+#
+# done()
+#     called at the end of drawing.
+#-
     pass
+
 #end Drawer
 
 class TurtleDrawer(Drawer) :
@@ -68,15 +88,13 @@ class TurtleDrawer(Drawer) :
         for \
             method \
         in \
-            ("pensize", "color", "penup", "pendown", "setpos",) \
+            ("pensize", "pencolor", "penup", "pendown", "setpos",) \
         :
             setattr(self, method, getattr(self.t, method))
         #end for
+        turtle.colormode(255)
+        self.done = turtle.exitonclick
     #end __init__
-
-    def done(self) :
-        pass
-    #end done
 
 #end TurtleDrawer
 
@@ -104,10 +122,13 @@ class PostScriptDrawer(Drawer) :
                 self.colors[name.lower()] = (r, g, b)
             #end if
         #end line
-        self.w("clippath pathbbox\n")
-        self.w("exch 4 3 roll sub 2 div\n") # x offset
-        self.w("3 1 roll exch sub 2 div\n") # y offset
-        self.w("translate\n")
+        self.w \
+          (
+            "clippath pathbbox\n"
+            "exch 4 3 roll sub 2 div\n" # x offset
+            "3 1 roll exch sub 2 div\n" # y offset
+            "translate\n" # move origin to centre
+          )
     #end __init__
 
     def pensize(self, newsize) :
@@ -115,7 +136,7 @@ class PostScriptDrawer(Drawer) :
         self.w("%.1f setlinewidth\n" % newsize)
     #end pensize
 
-    def color(self, *args) :
+    def pencolor(self, *args) :
         if len(args) == 1 and type(args[0]) == str :
             newcolor = self.colors[args[0]]
         elif len(args) == 1 and type(args[0]) == tuple :
@@ -128,7 +149,7 @@ class PostScriptDrawer(Drawer) :
         r, g, b = newcolor
         self.finishpath()
         self.w("%.3f %.3f %.3f setrgbcolor\n" % (r / 255, g / 255, b / 255))
-    #end color
+    #end pencolor
 
     def penup(self) :
         self.finishpath()
@@ -146,10 +167,14 @@ class PostScriptDrawer(Drawer) :
         if self.nrpoints == 500 : # actually level 2 and later have no limit? 
             self.finishpath()
         #end if
-        if self.currentpoint == None :
+        if self.nrpoints == 0 :
             self.w("newpath\n")
             if self.drawing :
-                self.w("0 0 moveto\n")
+                if self.currentpoint == None :
+                    self.w("0 0 moveto\n")
+                else :
+                    self.w("%.1f %.1f moveto\n" % (self.currentpoint[0], self.currentpoint[1]))
+                #end if
             #end if
         #end if
         self.w("%.1f %.1f %s\n" % (x, y, ("moveto", "lineto")[self.drawing]))
@@ -158,12 +183,10 @@ class PostScriptDrawer(Drawer) :
     #end setpos
 
     def finishpath(self) :
-        if self.currentpoint != None :
+        if self.nrpoints != 0 :
             self.w("stroke\n")
-            self.w("newpath\n")
-            self.w("%.1f %.1f moveto\n" % (self.currentpoint[0], self.currentpoint[1]))
+            self.nrpoints = 0
         #end if
-        self.nrpoints = 0
     #end finishpath
 
     def done(self) :
@@ -187,34 +210,39 @@ drawtypes = \
   (
     sys.argv[1:],
     "",
-    ["draw=", "pause=",]
+    ["draw="]
   )
-pause = 0
 drawtype = None
 for keyword, value in opts :
     if keyword == "--draw" :
         drawtype = drawtypes[value]
-    elif keyword == "--pause" :
-        pause = float(value)
     #end if
 #end for
-if drawtype == None or pause < 0 :
-    raise getopt.GetoptError("invalid or missing parameters")
-#end if
 
 t = drawtype()
 for arg in args :
-    # note color and pen_size default to settings for previous curve, if any
-    color = None
+    # note pen_color and pen_size default to settings for previous curve, if any
+    pen_color = None
     pen_size = None
     ring_radius = None
     wheel_radius = None
     wheel_frac = None
     nr_steps = None
-    for item in arg.split(",") :
+    for item in arg.split(":") :
         keyword, value = item.split("=", 1)
-        if keyword == "color" :
-            color = value
+        if keyword == "pencolor" :
+            pen_color = value
+            if pen_color.find(",") >= 0 :
+                pen_color = tuple(int(i) for i in pen_color.split(",", 2))
+            elif pen_color.startswith("#") :
+                assert (len(pen_color) - 1) % 3 == 0, "invalid HTML colour spec"
+                pen_color = tuple \
+                  (
+                    int(pen_color[i * l + 1 : (i + 1) * l + 1], 16)
+                    for l in ((len(pen_color) - 1) // 3,)
+                    for i in (0, 1, 2)
+                  )
+            #end if
         elif keyword == "frac" :
             wheel_frac = float(value)
         elif keyword == "nrsteps" :
@@ -240,10 +268,10 @@ for arg in args :
         raise getopt.GetoptError("invalid or missing curve parameters")
     #end if
     ratio = Fraction(ring_radius, wheel_radius)
-    nr_cycles = ratio.denominator
+    nr_cycles = ratio.denominator # to produce one complete traversal of curve
 
-    if color != None :
-        t.color(color)
+    if pen_color != None :
+        t.pencolor(pen_color)
     #end if
     if pen_size != None :
         t.pensize(pen_size)
@@ -259,4 +287,3 @@ for arg in args :
     #end for
 #end for
 t.done()
-time.sleep(pause)
