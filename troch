@@ -20,7 +20,7 @@
 #
 # where the valid keywords are
 #
-#     pencolor
+#     pencolor/pencolour
 #         specifies the pen colour to use to draw the curve. Defaults to the
 #         same as the previous curve, or black for the first curve.
 #     pensize
@@ -230,7 +230,7 @@ for arg in args :
     nr_steps = None
     for item in arg.split(":") :
         keyword, value = item.split("=", 1)
-        if keyword == "pencolor" :
+        if keyword == "pencolor" or keyword == "pencolour" :
             pen_color = value
             if pen_color.find(",") >= 0 :
                 pen_color = tuple(int(i) for i in pen_color.split(",", 2))
