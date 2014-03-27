@@ -328,7 +328,7 @@ for arg in args :
     t.penup() # for first point
     for i in range(0, nr_steps + 1) :
         theta_ring = 360 * nr_cycles * i / nr_steps
-        theta_wheel = theta_ring * ring_radius / wheel_radius
+        theta_wheel = theta_ring * (ring_radius / wheel_radius + 1)
         wheel_pos = Vec2D(ring_radius, 0).rotate(theta_ring + phase)
         curve_pos = wheel_pos + Vec2D(wheel_radius * wheel_frac, 0).rotate(theta_wheel)
         t.setpos(curve_pos)
