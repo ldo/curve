@@ -39,6 +39,9 @@
 #         the number of straight-line segments that make up the complete curve.
 #         A larger number makes for a more accurate (smoother) curve, at the
 #         expense of greater drawing time.
+#     phase
+#         optional starting phase angle in degrees for this pattern. If omitted,
+#         defaults to 0.
 #
 # Written by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>.
 #-
@@ -252,9 +255,14 @@ for arg in args :
     wheel_radius = None
     wheel_frac = None
     nr_steps = None
+    phase = 0
     for item in arg.split(":") :
         keyword, value = item.split("=", 1)
-        if keyword == "pencolor" or keyword == "pencolour" :
+        if keyword == "frac" :
+            wheel_frac = float(value)
+        elif keyword == "nrsteps" :
+            nr_steps = int(value)
+        elif keyword == "pencolor" or keyword == "pencolour" :
             pen_color = value
             if pen_color.find(",") >= 0 :
                 pen_color = tuple(int(i) for i in pen_color.split(",", 2))
@@ -267,12 +275,10 @@ for arg in args :
                     for i in (0, 1, 2)
                   )
             #end if
-        elif keyword == "frac" :
-            wheel_frac = float(value)
-        elif keyword == "nrsteps" :
-            nr_steps = int(value)
         elif keyword == "pensize" :
             pen_size = float(value)
+        elif keyword == "phase" :
+            phase = float(value)
         elif keyword == "ring" :
             ring_radius = int(value)
         elif keyword == "wheel" :
@@ -304,7 +310,7 @@ for arg in args :
     for i in range(0, nr_steps + 1) :
         theta_ring = 360 * nr_cycles * i / nr_steps
         theta_wheel = theta_ring * ring_radius / wheel_radius
-        wheel_pos = Vec2D(ring_radius, 0).rotate(theta_ring)
+        wheel_pos = Vec2D(ring_radius, 0).rotate(theta_ring + phase)
         curve_pos = wheel_pos + Vec2D(wheel_radius * wheel_frac, 0).rotate(theta_wheel)
         t.setpos(curve_pos)
         t.pendown() # for subsequent points
