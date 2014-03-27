@@ -7,8 +7,12 @@
 #
 #     troch [options] curvespec [curvespec...]
 #
-# where the only current option is
+# where the valid options are
 #
+#     --draw=drawtype
+#         specifies how to do the drawing:
+#             turtle     -- draw onscreen using Turtle graphics.
+#             postscript -- output PostScript drawing commands.
 #     --pause=n
 #         specifies how many seconds to pause after the drawing all the curves,
 #         before closing the turtle window and existing.
@@ -50,6 +54,132 @@ from turtle import \
 import getopt
 
 #+
+# Drawing classes
+#-
+
+class Drawer :
+    pass
+#end Drawer
+
+class TurtleDrawer(Drawer) :
+
+    def __init__(self) :
+        self.t = turtle.Turtle()
+        for \
+            method \
+        in \
+            ("pensize", "color", "penup", "pendown", "setpos",) \
+        :
+            setattr(self, method, getattr(self.t, method))
+        #end for
+    #end __init__
+
+    def done(self) :
+        pass
+    #end done
+
+#end TurtleDrawer
+
+class PostScriptDrawer(Drawer) :
+
+    def __init__(self) :
+        self.w = sys.stdout.write
+        self.nrpoints = 0
+        self.drawing = True
+        self.currentpoint = None
+        self.colors = {}
+        for line in open("/usr/share/X11/rgb.txt", "r") :
+            if not line.startswith("!") :
+                line = line.strip()
+                for junk in ("\t", "  ") :
+                    while True :
+                        line2 = line.replace(junk, " ")
+                        if line2 == line :
+                            break
+                        line = line2
+                    #end while
+                #end for
+                r, g, b, name = line.split(" ", 3)
+                r, g, b = int(r), int(g), int(b)
+                self.colors[name.lower()] = (r, g, b)
+            #end if
+        #end line
+        self.w("clippath pathbbox\n")
+        self.w("exch 4 3 roll sub 2 div\n") # x offset
+        self.w("3 1 roll exch sub 2 div\n") # y offset
+        self.w("translate\n")
+    #end __init__
+
+    def pensize(self, newsize) :
+        self.finishpath()
+        self.w("%.1f setlinewidth\n" % newsize)
+    #end pensize
+
+    def color(self, *args) :
+        if len(args) == 1 and type(args[0]) == str :
+            newcolor = self.colors[args[0]]
+        elif len(args) == 1 and type(args[0]) == tuple :
+            newcolor = args[0]
+        elif len(args) == 3 :
+            newcolor = args
+        else :
+            raiseTypeError("invalid color specification")
+        #end if
+        r, g, b = newcolor
+        self.finishpath()
+        self.w("%.3f %.3f %.3f setrgbcolor\n" % (r / 255, g / 255, b / 255))
+    #end color
+
+    def penup(self) :
+        self.finishpath()
+        self.drawing = False
+    #end penup
+
+    def pendown(self) :
+        self.drawing = True
+    #end pendown
+
+    def setpos(self, x, y = None) :
+        if y == None and isinstance(x, Vec2D) :
+            x, y = x[0], x[1]
+        #end if
+        if self.nrpoints == 500 : # actually level 2 and later have no limit? 
+            self.finishpath()
+        #end if
+        if self.currentpoint == None :
+            self.w("newpath\n")
+            if self.drawing :
+                self.w("0 0 moveto\n")
+            #end if
+        #end if
+        self.w("%.1f %.1f %s\n" % (x, y, ("moveto", "lineto")[self.drawing]))
+        self.nrpoints += 1
+        self.currentpoint = Vec2D(x, y)
+    #end setpos
+
+    def finishpath(self) :
+        if self.currentpoint != None :
+            self.w("stroke\n")
+            self.w("newpath\n")
+            self.w("%.1f %.1f moveto\n" % (self.currentpoint[0], self.currentpoint[1]))
+        #end if
+        self.nrpoints = 0
+    #end finishpath
+
+    def done(self) :
+        self.finishpath()
+        self.w("showpage\n")
+    #end done
+
+#end PostScriptDrawer
+
+drawtypes = \
+    {
+        "postscript" : PostScriptDrawer,
+        "turtle" : TurtleDrawer,
+    }
+
+#+
 # Mainline
 #-
 
@@ -57,19 +187,22 @@ import getopt
   (
     sys.argv[1:],
     "",
-    ["color=", "frac=", "nrsteps=", "pause=", "pensize=", "ring=", "wheel="]
+    ["draw=", "pause=",]
   )
-pause = None
+pause = 0
+drawtype = None
 for keyword, value in opts :
-    if keyword == "--pause" :
+    if keyword == "--draw" :
+        drawtype = drawtypes[value]
+    elif keyword == "--pause" :
         pause = float(value)
     #end if
 #end for
-if pause == None or pause < 0 :
+if drawtype == None or pause < 0 :
     raise getopt.GetoptError("invalid or missing parameters")
 #end if
 
-t = turtle.Turtle()
+t = drawtype()
 for arg in args :
     # note color and pen_size default to settings for previous curve, if any
     color = None
@@ -125,4 +258,5 @@ for arg in args :
         t.pendown() # for subsequent points
     #end for
 #end for
+t.done()
 time.sleep(pause)
