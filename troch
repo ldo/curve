@@ -101,7 +101,6 @@ class TurtleDrawer(Drawer) :
             setattr(self, method, getattr(self.t, method))
         #end for
         turtle.colormode(255)
-        self.done = turtle.exitonclick
     #end __init__
 
     def speed(self, newspeed) :
@@ -112,6 +111,11 @@ class TurtleDrawer(Drawer) :
         #end try
         self.t.speed(speedval)
     #end speed
+
+    def done(self) :
+        self.t.hideturtle()
+        turtle.exitonclick()
+    #end done
 
 #end TurtleDrawer
 
