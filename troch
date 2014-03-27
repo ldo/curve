@@ -7,7 +7,7 @@
 #
 #     troch [options] curvespec [curvespec...]
 #
-# where the only valid option is
+# where the valid options are
 #
 #     --draw=drawtype (required)
 #         specifies how to do the drawing:
