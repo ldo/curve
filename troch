@@ -13,6 +13,8 @@
 #         specifies how to do the drawing:
 #             turtle     -- draw onscreen using Turtle graphics.
 #             postscript -- output PostScript drawing commands to standard output.
+#     --hideturtle
+#         hide the turtle to speed up drawing.
 #     --speed=speed
 #         speed of turtle movement (ignored for PostScript output)
 #
@@ -65,6 +67,9 @@ class Drawer :
 # speed(v)
 #     sets speed of drawing
 #
+# hideturtle()
+#     hides the turtle
+#
 # pensize(w)
 #     sets the pensize for subsequent drawing to w.
 #
@@ -96,7 +101,7 @@ class TurtleDrawer(Drawer) :
         for \
             method \
         in \
-            ("pensize", "pencolor", "penup", "pendown", "setpos",) \
+            ("hideturtle", "pensize", "pencolor", "penup", "pendown", "setpos",) \
         :
             setattr(self, method, getattr(self.t, method))
         #end for
@@ -155,6 +160,10 @@ class PostScriptDrawer(Drawer) :
     def speed(self, newspeed) :
         pass
     #end speed
+
+    def hideturtle(self) :
+        pass
+    #end hideturtle
 
     def pensize(self, newsize) :
         self.finishpath()
@@ -235,13 +244,16 @@ drawtypes = \
   (
     sys.argv[1:],
     "",
-    ["draw=", "speed="]
+    ["draw=", "hideturtle", "speed="]
   )
 drawtype = None
 speed = None
+hideturtle = False
 for keyword, value in opts :
     if keyword == "--draw" :
         drawtype = drawtypes[value]
+    elif keyword == "--hideturtle" :
+        hideturtle = True
     elif keyword == "--speed" :
         speed = value
     #end if
@@ -250,6 +262,9 @@ for keyword, value in opts :
 t = drawtype()
 if speed != None :
     t.speed(speed)
+#end if
+if hideturtle :
+    t.hideturtle()
 #end if
 for arg in args :
     # note pen_color and pen_size default to settings for previous curve, if any
