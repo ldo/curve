@@ -64,7 +64,6 @@ import sys
 import math
 from fractions import \
     Fraction
-import turtle
 from turtle import \
     Vec2D
 import getopt
@@ -108,7 +107,8 @@ class Drawer :
 class TurtleDrawer(Drawer) :
 
     def __init__(self) :
-        self.t = turtle.Turtle()
+        import turtle
+        self.t = turtle
         for \
             method \
         in \
@@ -149,7 +149,7 @@ class TurtleDrawer(Drawer) :
 
     def done(self) :
         self.t.hideturtle()
-        turtle.exitonclick()
+        self.t.exitonclick()
     #end done
 
 #end TurtleDrawer
