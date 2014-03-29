@@ -22,6 +22,9 @@
 #                hide the turtle to speed up drawing.
 #            speed=speed
 #                speed of turtle movement.
+#            trackheading
+#                causes the turtle to always face in the direction it is moving.
+#                Slows down the drawing, which is why it’s not the default.
 #
 #        For the postscript drawtype, the drawoptions are:
 #            scale=f
