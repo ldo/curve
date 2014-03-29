@@ -13,9 +13,23 @@
 #         specifies how to do the drawing. The drawspec looks like
 #             drawtype[:drawoption[:drawoption..]]
 #        where drawtype is one of
-#             turtle     -- draw onscreen using Turtle graphics.
+#             cairo      -- use Cairo graphics to output a PNG image file.
 #             postscript -- output PostScript drawing commands.
+#             turtle     -- draw onscreen using Turtle graphics.
 #        and the drawoptions are drawtype-specific.
+#
+#        For the cairo drawtype, the drawoptions are:
+#            out=filename (required)
+#                specifies a filename to write the PNG image data to.
+#            scale=f
+#                an overall scale factor to apply to the drawing.
+#
+#        For the postscript drawtype, the drawoptions are:
+#            out=filename
+#                specifies a filename to write the PostScript to. If not specified,
+#                it goes to standard output.
+#            scale=f
+#                an overall scale factor to apply to the drawing.
 #
 #        For the turtle drawtype, the drawoptions are:
 #            hideturtle
@@ -25,13 +39,6 @@
 #            trackheading
 #                causes the turtle to always face in the direction it is moving.
 #                Slows down the drawing, which is why it’s not the default.
-#
-#        For the postscript drawtype, the drawoptions are:
-#            out=filename
-#                specifies a filename to write the PostScript to. If not specified,
-#                it goes to standard output.
-#            scale=f
-#                an overall scale factor to apply to the drawing.
 #
 #     --bgcolor/bgcolour=colourspec
 #            specifies the background colour to set before doing drawing.
@@ -72,6 +79,7 @@ import sys
 import math
 from fractions import \
     Fraction
+import cairo
 from turtle import \
     Vec2D
 import getopt
@@ -80,7 +88,7 @@ import getopt
 # Useful stuff
 #-
 
-def parse_color(colorstr) :
+def parse_color_opt(colorstr) :
     if colorstr.find(",") >= 0 :
         pen_color = tuple(float(i) for i in colorstr.split(",", 2))
     elif colorstr.startswith("#") :
@@ -95,7 +103,43 @@ def parse_color(colorstr) :
         pen_color = colorstr # assume it’s a colour name
     #end if
     return pen_color
-#end parse_color
+#end parse_color_opt
+
+color_names = {} # mapping of traditional X11 colour names to (r, g, b) tuples
+
+def load_color_names() :
+    for line in open("/usr/share/X11/rgb.txt", "r") :
+        if not line.startswith("!") :
+            line = line.strip()
+            for junk in ("\t", "  ") :
+                while True :
+                    line2 = line.replace(junk, " ")
+                    if line2 == line :
+                        break
+                    line = line2
+                #end while
+            #end for
+            r, g, b, name = line.split(" ", 3)
+            r, g, b = int(r), int(g), int(b)
+            color_names[name.lower()] = (r / 255, g / 255, b / 255)
+        #end if
+    #end line
+#end load_color_names
+load_color_names()
+del load_color_names
+
+def parse_color_args(args) :
+    if len(args) == 1 and type(args[0]) == str :
+        newcolor = color_names[args[0]]
+    elif len(args) == 1 and type(args[0]) == tuple and len(args[0]) == 3 :
+        newcolor = args[0]
+    elif len(args) == 3 :
+        newcolor = args
+    else :
+        raise TypeError("invalid colour specification")
+    #end if
+    return newcolor
+#end parse_color_args
 
 #+
 # Drawing classes
@@ -144,64 +188,101 @@ class Drawer :
 
 #end Drawer
 
-class TurtleDrawer(Drawer) :
+class CairoDrawer(Drawer) :
 
     def __init__(self) :
-        import turtle
-        self.t = turtle
-        for \
-            method \
-        in \
-            ("bgcolor", "pensize", "pencolor", "penup", "pendown",) \
-        :
-            setattr(self, method, getattr(self.t, method))
-        #end for
-        self.track_heading = False
+        self.size = None
+        self.bg_color = (1, 1, 1)
+        self.pen_color = (0, 0, 0)
+        self.pen_size = 1
+        self.scale_factor = 1.0
+        self.outfilename = None
     #end __init__
 
-    def opt_speed(self, newspeed) :
-        try :
-            speedval = int(newspeed)
-        except ValueError :
-            speedval = newspeed
-        #end try
-        self.t.speed(speedval)
-    #end opt_speed
+    def opt_out(self, filename) :
+        self.outfilename = filename
+    #end opt_out
 
-    def opt_hideturtle(self) :
-        self.t.hideturtle()
-    #end opt_hideturtle
+    def opt_scale(self, factor) :
+        self.scale_factor = float(factor)
+    #end opt_scale
 
-    def opt_trackheading(self) :
-        self.track_heading = True
-    #end opt_trackheading
-
-    def setsize(self, w, h) :
-        self.t.screensize(w, h)
-        self.t.setup(width = w, height = h)
+    def setsize(self, newsize) :
+        self.size = newsize
     #end setsize
 
+    def bgcolor(self, *args) :
+        self.bg_color = parse_color_args(args)
+    #end bgcolor
+
     def donesetup(self) :
-        pass
+        assert self.size != None, "forgot to set drawing size"
+        assert self.outfilename != None, "forgot to set output filename"
+        self.pix = cairo.ImageSurface \
+          (
+            cairo.FORMAT_RGB24, # format
+            self.size[0], # width
+            self.size[1] # height
+          )
+        self.g = cairo.Context(self.pix)
+        self.g.set_operator(cairo.OPERATOR_SOURCE)
+        self.g.translate(self.size[0] / 2, self.size[1] / 2)
+        self.g.scale(self.scale_factor, self.scale_factor)
+        self.g.set_source_rgb(*self.bg_color)
+        self.g.paint()
+        self.g.new_path()
+        self.g.move_to(0, 0)
+        self.inpath = True
+        self.drawing = True
     #end donesetup
 
+    def pensize(self, newsize) :
+        self.pen_size = newsize
+    #end pensize
+
+    def pencolor(self, *args) :
+        self.pen_color = parse_color_args(args)
+    #end pencolor
+
+    def penup(self) :
+        self.finishpath()
+        self.drawing = False
+    #end penup
+
+    def pendown(self) :
+        self.drawing = True
+    #end pendown
+
     def setpos(self, newpos) :
-        if self.track_heading and self.t.isvisible() :
-            prevpos = self.t.position()
-            self.t.setheading \
-              (
-                math.degrees(math.atan2(newpos[1] - prevpos[1], newpos[0] - prevpos[0]))
-              )
-        #end if
-        self.t.setpos(newpos)
+        self.startpath()
+        (self.g.move_to, self.g.line_to)[self.drawing](newpos[0], newpos[1])
     #end setpos
 
+    def startpath(self) :
+        if not self.inpath :
+            self.g.new_path()
+            self.g.set_source_rgb(*self.pen_color)
+            self.g.set_line_width(self.pen_size)
+            self.inpath = True
+        #end if
+    #end startpath
+
+    def finishpath(self) :
+        if self.inpath :
+            self.g.stroke()
+        #end if
+        self.inpath = False
+    #end finishpath
+
     def done(self) :
-        self.t.hideturtle()
-        self.t.exitonclick()
+        self.finishpath()
+        self.pix.flush()
+        self.g = None
+        self.pix.write_to_png(self.outfilename)
+        self.pix = None
     #end done
 
-#end TurtleDrawer
+#end CairoDrawer
 
 class PostScriptDrawer(Drawer) :
 
@@ -211,37 +292,7 @@ class PostScriptDrawer(Drawer) :
         self.nrpoints = 0
         self.drawing = True
         self.currentpoint = None
-        self.colors = {}
-        for line in open("/usr/share/X11/rgb.txt", "r") :
-            if not line.startswith("!") :
-                line = line.strip()
-                for junk in ("\t", "  ") :
-                    while True :
-                        line2 = line.replace(junk, " ")
-                        if line2 == line :
-                            break
-                        line = line2
-                    #end while
-                #end for
-                r, g, b, name = line.split(" ", 3)
-                r, g, b = int(r), int(g), int(b)
-                self.colors[name.lower()] = (r / 255, g / 255, b / 255)
-            #end if
-        #end line
     #end __init__
-
-    def parsecolor(self, args) :
-        if len(args) == 1 and type(args[0]) == str :
-            newcolor = self.colors[args[0]]
-        elif len(args) == 1 and type(args[0]) == tuple and len(args[0]) == 3 :
-            newcolor = args[0]
-        elif len(args) == 3 :
-            newcolor = args
-        else :
-            raise TypeError("invalid colour specification")
-        #end if
-        return newcolor
-    #end parsecolor
 
     def opt_scale(self, factor) :
         factor = float(factor)
@@ -253,7 +304,7 @@ class PostScriptDrawer(Drawer) :
         self.w = self.out.write
     #end opt_out
 
-    def setsize(self, w, h) :
+    def setsize(self, newsize) :
         self.w \
           (
                 "<<\n"
@@ -261,13 +312,13 @@ class PostScriptDrawer(Drawer) :
                 "    /PageSize %(width).3f %(height).3f\n"
                 ">> setpagedevice\n"
             %
-                {"width" : w, "height" : h}
+                {"width" : newsize[0], "height" : newsize[1]}
           )
     #end setsize
 
     def bgcolor(self, *args) :
         self.w("currentcolor currentcolorspace\n")
-        self.w("%.3f %.3f %.3f setrgbcolor\n" % self.parsecolor(args))
+        self.w("%.3f %.3f %.3f setrgbcolor\n" % parse_color_args(args))
         self.w("clippath fill\nsetcolorspace setcolor\n")
     #end bgcolor
 
@@ -288,7 +339,7 @@ class PostScriptDrawer(Drawer) :
 
     def pencolor(self, *args) :
         self.finishpath()
-        self.w("%.3f %.3f %.3f setrgbcolor\n" % self.parsecolor(args))
+        self.w("%.3f %.3f %.3f setrgbcolor\n" % parse_color_args(args))
     #end pencolor
 
     def penup(self) :
@@ -300,10 +351,8 @@ class PostScriptDrawer(Drawer) :
         self.drawing = True
     #end pendown
 
-    def setpos(self, x, y = None) :
-        if y == None and isinstance(x, Vec2D) :
-            x, y = x[0], x[1]
-        #end if
+    def setpos(self, newpos) :
+        x, y = newpos[0], newpos[1]
         if self.nrpoints == 500 : # actually level 2 and later have no limit? 
             self.finishpath()
         #end if
@@ -340,8 +389,69 @@ class PostScriptDrawer(Drawer) :
 
 #end PostScriptDrawer
 
+class TurtleDrawer(Drawer) :
+
+    def __init__(self) :
+        import turtle
+        self.t = turtle
+        for \
+            method \
+        in \
+            ("bgcolor", "pensize", "pencolor", "penup", "pendown",) \
+        :
+            setattr(self, method, getattr(self.t, method))
+        #end for
+        self.track_heading = False
+    #end __init__
+
+    def opt_speed(self, newspeed) :
+        try :
+            speedval = int(newspeed)
+        except ValueError :
+            speedval = newspeed
+        #end try
+        self.t.speed(speedval)
+    #end opt_speed
+
+    def opt_hideturtle(self) :
+        self.t.hideturtle()
+    #end opt_hideturtle
+
+    def opt_trackheading(self) :
+        self.track_heading = True
+    #end opt_trackheading
+
+    def setsize(self, newsize) :
+        w, h = newsize[0], newsize[1]
+        self.t.screensize(w, h)
+        self.t.setup(width = w, height = h)
+    #end setsize
+
+    def donesetup(self) :
+        pass
+    #end donesetup
+
+    def setpos(self, newpos) :
+        if self.track_heading and self.t.isvisible() :
+            prevpos = self.t.position()
+            self.t.setheading \
+              (
+                math.degrees(math.atan2(newpos[1] - prevpos[1], newpos[0] - prevpos[0]))
+              )
+        #end if
+        self.t.setpos(newpos)
+    #end setpos
+
+    def done(self) :
+        self.t.hideturtle()
+        self.t.exitonclick()
+    #end done
+
+#end TurtleDrawer
+
 drawtypes = \
     {
+        "cairo" : CairoDrawer,
         "postscript" : PostScriptDrawer,
         "turtle" : TurtleDrawer,
     }
@@ -361,7 +471,7 @@ bgcolor = None
 drawsize = None
 for keyword, value in opts :
     if keyword == "--bgcolor" or keyword == "--bgcolour" :
-        bgcolor = parse_color(value)
+        bgcolor = parse_color_opt(value)
     elif keyword == "--draw" :
         items = value.split(":")
         if drawtype != None :
@@ -382,14 +492,14 @@ for keyword, value in opts :
         #end for
     elif keyword == "--size" :
         items = value.split(":", 1)
-        drawsize = (float(items[0]), float(items[1]))
+        drawsize = Vec2D(int(items[0]), int(items[1]))
     #end if
 #end for
 if drawtype == None :
     raise getopt.GetoptError("missing --draw opt")
 #end if
 if drawsize != None :
-    t.setsize(*drawsize)
+    t.setsize(drawsize)
 #end if
 if bgcolor != None :
     t.bgcolor(bgcolor)
@@ -411,7 +521,7 @@ for arg in args :
         elif keyword == "nrsteps" :
             nr_steps = int(value)
         elif keyword == "pencolor" or keyword == "pencolour" :
-            pen_color = parse_color(value)
+            pen_color = parse_color_opt(value)
         elif keyword == "pensize" :
             pen_size = float(value)
         elif keyword == "phase" :
