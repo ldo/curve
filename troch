@@ -136,7 +136,10 @@ class TurtleDrawer(Drawer) :
     def setpos(self, newpos) :
         if self.track_heading and self.t.isvisible() :
             prevpos = self.t.position()
-            self.t.setheading(math.degrees(math.atan2(newpos[1] - prevpos[1], newpos[0] - prevpos[0])))
+            self.t.setheading \
+              (
+                math.degrees(math.atan2(newpos[1] - prevpos[1], newpos[0] - prevpos[0]))
+              )
         #end if
         self.t.setpos(newpos)
     #end setpos
