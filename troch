@@ -58,6 +58,7 @@
 #-
 
 import sys
+import math
 from fractions import \
     Fraction
 import turtle
@@ -108,10 +109,11 @@ class TurtleDrawer(Drawer) :
         for \
             method \
         in \
-            ("pensize", "pencolor", "penup", "pendown", "setpos",) \
+            ("pensize", "pencolor", "penup", "pendown",) \
         :
             setattr(self, method, getattr(self.t, method))
         #end for
+        self.track_heading = False
     #end __init__
 
     def opt_speed(self, newspeed) :
@@ -126,6 +128,18 @@ class TurtleDrawer(Drawer) :
     def opt_hideturtle(self) :
         self.t.hideturtle()
     #end opt_hideturtle
+
+    def opt_trackheading(self) :
+        self.track_heading = True
+    #end opt_trackheading
+
+    def setpos(self, newpos) :
+        if self.track_heading and self.t.isvisible() :
+            prevpos = self.t.position()
+            self.t.setheading(math.degrees(math.atan2(newpos[1] - prevpos[1], newpos[0] - prevpos[0])))
+        #end if
+        self.t.setpos(newpos)
+    #end setpos
 
     def done(self) :
         self.t.hideturtle()
