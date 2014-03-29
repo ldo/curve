@@ -32,6 +32,8 @@
 #
 #     --bgcolor/bgcolour=colourspec
 #            specifies the background colour to set before doing drawing.
+#     --size=w:h
+#            specifies the size of the drawing area.
 #
 # Each curvespec specifies the parameters for a curve to draw, and takes the form
 #
@@ -103,10 +105,17 @@ class Drawer :
 # opt_xxx
 #     defines a command-line option xxx (for whatever xxx you like) to be specified
 #     following the drawtype. Can take one or no arguments.
-
+#
+# setsize(w, h)
+#     sets the dimensions of the drawing area.
+#
 # bgcolor(c)
 #     clears the background to the specified colour. See pencolor, below, for valid
 #     values for c.
+#
+# donesetup()
+#     will be called exactly once. Indicates that no further calls to setsize or
+#     bgcolor will be done.
 #
 # pensize(w)
 #     sets the pensize for subsequent drawing to w.
@@ -164,6 +173,15 @@ class TurtleDrawer(Drawer) :
         self.track_heading = True
     #end opt_trackheading
 
+    def setsize(self, w, h) :
+        self.t.screensize(w, h)
+        self.t.setup(width = w, height = h)
+    #end setsize
+
+    def donesetup(self) :
+        pass
+    #end donesetup
+
     def setpos(self, newpos) :
         if self.track_heading and self.t.isvisible() :
             prevpos = self.t.position()
@@ -206,13 +224,6 @@ class PostScriptDrawer(Drawer) :
                 self.colors[name.lower()] = (r / 255, g / 255, b / 255)
             #end if
         #end line
-        self.w \
-          (
-            "clippath pathbbox\n"
-            "exch 4 3 roll sub 2 div\n" # x offset
-            "3 1 roll exch sub 2 div\n" # y offset
-            "translate\n" # move origin to centre
-          )
     #end __init__
 
     def parsecolor(self, args) :
@@ -233,11 +244,33 @@ class PostScriptDrawer(Drawer) :
         self.w("%.3f %.3f scale\n" % (factor, factor))
     #end opt_scale
 
+    def setsize(self, w, h) :
+        self.w \
+          (
+                "<<\n"
+                "    /ImageBBox 0 0 %(width).3f %(height).3f\n"
+                "    /PageSize %(width).3f %(height).3f\n"
+                ">> setpagedevice\n"
+            %
+                {"width" : w, "height" : h}
+          )
+    #end setsize
+
     def bgcolor(self, *args) :
         self.w("currentcolor currentcolorspace\n")
         self.w("%.3f %.3f %.3f setrgbcolor\n" % self.parsecolor(args))
         self.w("clippath fill\nsetcolorspace setcolor\n")
     #end bgcolor
+
+    def donesetup(self) :
+        self.w \
+          (
+            "clippath pathbbox\n"
+            "exch 4 3 roll sub 2 div\n" # x offset
+            "3 1 roll exch sub 2 div\n" # y offset
+            "translate\n" # move origin to centre
+          )
+    #end donesetup
 
     def pensize(self, newsize) :
         self.finishpath()
@@ -308,10 +341,11 @@ drawtypes = \
   (
     sys.argv[1:],
     "",
-    ["bgcolor=", "bgcolour=", "draw="]
+    ["bgcolor=", "bgcolour=", "draw=", "size="]
   )
 drawtype = None
 bgcolor = None
+drawsize = None
 for keyword, value in opts :
     if keyword == "--bgcolor" or keyword == "--bgcolour" :
         bgcolor = parse_color(value)
@@ -333,15 +367,21 @@ for keyword, value in opts :
             assert hasattr(t, opt_method), "%s drawtype has no option %s" % (items[0], keyword)
             getattr(t, opt_method)(*optargs)
         #end for
+    elif keyword == "--size" :
+        items = value.split(":", 1)
+        drawsize = (float(items[0]), float(items[1]))
     #end if
 #end for
 if drawtype == None :
     raise getopt.GetoptError("missing --draw opt")
 #end if
+if drawsize != None :
+    t.setsize(*drawsize)
+#end if
 if bgcolor != None :
     t.bgcolor(bgcolor)
 #end if
-
+t.donesetup()
 for arg in args :
     # note pen_color and pen_size default to settings for previous curve, if any
     pen_color = None
