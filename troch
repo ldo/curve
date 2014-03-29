@@ -234,8 +234,9 @@ class PostScriptDrawer(Drawer) :
     #end opt_scale
 
     def bgcolor(self, *args) :
+        self.w("currentcolor currentcolorspace\n")
         self.w("%.3f %.3f %.3f setrgbcolor\n" % self.parsecolor(args))
-        self.w("clippath fill\n")
+        self.w("clippath fill\nsetcolorspace setcolor\n")
     #end bgcolor
 
     def pensize(self, newsize) :
