@@ -14,7 +14,7 @@
 #             drawtype[:drawoption[:drawoption..]]
 #        where drawtype is one of
 #             turtle     -- draw onscreen using Turtle graphics.
-#             postscript -- output PostScript drawing commands to standard output.
+#             postscript -- output PostScript drawing commands.
 #        and the drawoptions are drawtype-specific.
 #
 #        For the turtle drawtype, the drawoptions are:
@@ -27,6 +27,9 @@
 #                Slows down the drawing, which is why it’s not the default.
 #
 #        For the postscript drawtype, the drawoptions are:
+#            out=filename
+#                specifies a filename to write the PostScript to. If not specified,
+#                it goes to standard output.
 #            scale=f
 #                an overall scale factor to apply to the drawing.
 #
@@ -204,6 +207,7 @@ class PostScriptDrawer(Drawer) :
 
     def __init__(self) :
         self.w = sys.stdout.write
+        self.out = None
         self.nrpoints = 0
         self.drawing = True
         self.currentpoint = None
@@ -243,6 +247,11 @@ class PostScriptDrawer(Drawer) :
         factor = float(factor)
         self.w("%.3f %.3f scale\n" % (factor, factor))
     #end opt_scale
+
+    def opt_out(self, filename) :
+        self.out = open(filename, "w")
+        self.w = self.out.write
+    #end opt_out
 
     def setsize(self, w, h) :
         self.w \
@@ -323,6 +332,10 @@ class PostScriptDrawer(Drawer) :
     def done(self) :
         self.finishpath()
         self.w("showpage\n")
+        if self.out != None :
+            self.out.flush()
+            self.out.close()
+        #end if
     #end done
 
 #end PostScriptDrawer
