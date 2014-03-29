@@ -261,18 +261,13 @@ for keyword, value in opts :
         for item in items[1:] :
             value = item.split("=", 1)
             if len(value) == 2 :
-                keyword, value = value
+                keyword, optargs = value[0], (value[1],)
             else :
-                keyword, value = value[0], None
+                keyword, optargs = value[0], ()
             #end if
             opt_method = "opt_" + keyword
             assert hasattr(t, opt_method), "%s drawtype has no option %s" % (items[0], keyword)
-            opt_method = getattr(t, opt_method)
-            if value != None :
-                opt_method(value)
-            else :
-                opt_method()
-            #end if
+            getattr(t, opt_method)(*optargs)
         #end for
     #end if
 #end for
