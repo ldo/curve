@@ -7,16 +7,25 @@
 #
 #     troch [options] curvespec [curvespec...]
 #
-# where the valid options are
+# where the only valid option is
 #
-#     --draw=drawtype (required)
-#         specifies how to do the drawing:
+#     --draw=drawspec (required)
+#         specifies how to do the drawing. The drawspec looks like
+#             drawtype[:drawoption[:drawoption..]]
+#        where drawtype is one of
 #             turtle     -- draw onscreen using Turtle graphics.
 #             postscript -- output PostScript drawing commands to standard output.
-#     --hideturtle
-#         hide the turtle to speed up drawing.
-#     --speed=speed
-#         speed of turtle movement (ignored for PostScript output)
+#        and the drawoptions are drawtype-specific.
+#
+#        For the turtle drawtype, the drawoptions are:
+#            hideturtle
+#                hide the turtle to speed up drawing.
+#            speed=speed
+#                speed of turtle movement.
+#
+#        For the postscript drawtype, the drawoptions are:
+#            scale=f
+#                an overall scale factor to apply to the drawing.
 #
 # Each curvespec specifies the parameters for a curve to draw, and takes the form
 #
@@ -64,11 +73,9 @@ class Drawer :
 #+
 # Subclasses should define the following methods:
 #
-# speed(v)
-#     sets speed of drawing
-#
-# hideturtle()
-#     hides the turtle
+# opt_xxx
+#     defines a command-line option xxx (for whatever xxx you like) to be specified
+#     following the drawtype. Can take one or no arguments.
 #
 # pensize(w)
 #     sets the pensize for subsequent drawing to w.
@@ -101,20 +108,24 @@ class TurtleDrawer(Drawer) :
         for \
             method \
         in \
-            ("hideturtle", "pensize", "pencolor", "penup", "pendown", "setpos",) \
+            ("pensize", "pencolor", "penup", "pendown", "setpos",) \
         :
             setattr(self, method, getattr(self.t, method))
         #end for
     #end __init__
 
-    def speed(self, newspeed) :
+    def opt_speed(self, newspeed) :
         try :
             speedval = int(newspeed)
         except ValueError :
             speedval = newspeed
         #end try
         self.t.speed(speedval)
-    #end speed
+    #end opt_speed
+
+    def opt_hideturtle(self) :
+        self.t.hideturtle()
+    #end opt_hideturtle
 
     def done(self) :
         self.t.hideturtle()
@@ -156,13 +167,10 @@ class PostScriptDrawer(Drawer) :
           )
     #end __init__
 
-    def speed(self, newspeed) :
-        pass
-    #end speed
-
-    def hideturtle(self) :
-        pass
-    #end hideturtle
+    def opt_scale(self, factor) :
+        factor = float(factor)
+        self.w("%.3f %.3f scale\n" % (factor, factor))
+    #end opt_scale
 
     def pensize(self, newsize) :
         self.finishpath()
@@ -242,28 +250,33 @@ drawtypes = \
   (
     sys.argv[1:],
     "",
-    ["draw=", "hideturtle", "speed="]
+    ["draw="]
   )
 drawtype = None
-speed = None
-hideturtle = False
 for keyword, value in opts :
     if keyword == "--draw" :
-        drawtype = drawtypes[value]
-    elif keyword == "--hideturtle" :
-        hideturtle = True
-    elif keyword == "--speed" :
-        speed = value
+        items = value.split(":")
+        drawtype = drawtypes[items[0]]
+        t = drawtype()
+        for item in items[1:] :
+            value = item.split("=", 1)
+            if len(value) == 2 :
+                keyword, value = value
+            else :
+                keyword, value = value[0], None
+            #end if
+            opt_method = "opt_" + keyword
+            assert hasattr(t, opt_method), "%s drawtype has no option %s" % (items[0], keyword)
+            opt_method = getattr(t, opt_method)
+            if value != None :
+                opt_method(value)
+            else :
+                opt_method()
+            #end if
+        #end for
     #end if
 #end for
 
-t = drawtype()
-if speed != None :
-    t.speed(speed)
-#end if
-if hideturtle :
-    t.hideturtle()
-#end if
 for arg in args :
     # note pen_color and pen_size default to settings for previous curve, if any
     pen_color = None
