@@ -256,6 +256,9 @@ drawtype = None
 for keyword, value in opts :
     if keyword == "--draw" :
         items = value.split(":")
+        if drawtype != None :
+            raise getopt.GetoptError("only one --draw opt allowed")
+        #end if
         drawtype = drawtypes[items[0]]
         t = drawtype()
         for item in items[1:] :
@@ -271,6 +274,9 @@ for keyword, value in opts :
         #end for
     #end if
 #end for
+if drawtype == None :
+    raise getopt.GetoptError("missing --draw opt")
+#end if
 
 for arg in args :
     # note pen_color and pen_size default to settings for previous curve, if any
