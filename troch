@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #+
-# Generate epitrochoid and hypotrochoid patterns using Turtle graphics.
+# Generate epitrochoid and hypotrochoid patterns using various graphics systems.
 # For background, see <https://en.wikipedia.org/wiki/Spirograph>,
 # <https://en.wikipedia.org/wiki/Epitrochoid> and <https://en.wikipedia.org/wiki/Hypotrochoid>.
 # Invoke this script as follows:
