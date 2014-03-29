@@ -7,7 +7,7 @@
 #
 #     troch [options] curvespec [curvespec...]
 #
-# where the only valid option is
+# where the valid options are
 #
 #     --draw=drawspec (required)
 #         specifies how to do the drawing. The drawspec looks like
@@ -29,6 +29,9 @@
 #        For the postscript drawtype, the drawoptions are:
 #            scale=f
 #                an overall scale factor to apply to the drawing.
+#
+#     --bgcolor/bgcolour=colourspec
+#            specifies the background colour to set before doing drawing.
 #
 # Each curvespec specifies the parameters for a curve to draw, and takes the form
 #
@@ -69,6 +72,27 @@ from turtle import \
 import getopt
 
 #+
+# Useful stuff
+#-
+
+def parse_color(colorstr) :
+    if colorstr.find(",") >= 0 :
+        pen_color = tuple(float(i) for i in colorstr.split(",", 2))
+    elif colorstr.startswith("#") :
+        assert (len(colorstr) - 1) % 3 == 0, "invalid HTML colour spec"
+        seglen = (len(colorstr) - 1) // 3
+        pen_color = tuple \
+          (
+            int(colorstr[i * seglen + 1 : (i + 1) * seglen + 1], 16) / ((1 << seglen * 4) - 1)
+            for i in (0, 1, 2)
+          )
+    else :
+        pen_color = colorstr # assume it’s a colour name
+    #end if
+    return pen_color
+#end parse_color
+
+#+
 # Drawing classes
 #-
 
@@ -79,6 +103,10 @@ class Drawer :
 # opt_xxx
 #     defines a command-line option xxx (for whatever xxx you like) to be specified
 #     following the drawtype. Can take one or no arguments.
+
+# bgcolor(c)
+#     clears the background to the specified colour. See pencolor, below, for valid
+#     values for c.
 #
 # pensize(w)
 #     sets the pensize for subsequent drawing to w.
@@ -112,7 +140,7 @@ class TurtleDrawer(Drawer) :
         for \
             method \
         in \
-            ("pensize", "pencolor", "penup", "pendown",) \
+            ("bgcolor", "pensize", "pencolor", "penup", "pendown",) \
         :
             setattr(self, method, getattr(self.t, method))
         #end for
@@ -187,17 +215,7 @@ class PostScriptDrawer(Drawer) :
           )
     #end __init__
 
-    def opt_scale(self, factor) :
-        factor = float(factor)
-        self.w("%.3f %.3f scale\n" % (factor, factor))
-    #end opt_scale
-
-    def pensize(self, newsize) :
-        self.finishpath()
-        self.w("%.1f setlinewidth\n" % newsize)
-    #end pensize
-
-    def pencolor(self, *args) :
+    def parsecolor(self, args) :
         if len(args) == 1 and type(args[0]) == str :
             newcolor = self.colors[args[0]]
         elif len(args) == 1 and type(args[0]) == tuple :
@@ -205,10 +223,29 @@ class PostScriptDrawer(Drawer) :
         elif len(args) == 3 :
             newcolor = args
         else :
-            raiseTypeError("invalid color specification")
+            raise TypeError("invalid colour specification")
         #end if
+        return newcolor
+    #end parsecolor
+
+    def opt_scale(self, factor) :
+        factor = float(factor)
+        self.w("%.3f %.3f scale\n" % (factor, factor))
+    #end opt_scale
+
+    def bgcolor(self, *args) :
+        self.w("%.3f %.3f %.3f setrgbcolor\n" % self.parsecolor(args))
+        self.w("clippath fill\n")
+    #end bgcolor
+
+    def pensize(self, newsize) :
         self.finishpath()
-        self.w("%.3f %.3f %.3f setrgbcolor\n" % newcolor)
+        self.w("%.1f setlinewidth\n" % newsize)
+    #end pensize
+
+    def pencolor(self, *args) :
+        self.finishpath()
+        self.w("%.3f %.3f %.3f setrgbcolor\n" % self.parsecolor(args))
     #end pencolor
 
     def penup(self) :
@@ -270,11 +307,14 @@ drawtypes = \
   (
     sys.argv[1:],
     "",
-    ["draw="]
+    ["bgcolor=", "bgcolour=", "draw="]
   )
 drawtype = None
+bgcolor = None
 for keyword, value in opts :
-    if keyword == "--draw" :
+    if keyword == "--bgcolor" or keyword == "--bgcolour" :
+        bgcolor = parse_color(value)
+    elif keyword == "--draw" :
         items = value.split(":")
         if drawtype != None :
             raise getopt.GetoptError("only one --draw opt allowed")
@@ -297,6 +337,9 @@ for keyword, value in opts :
 if drawtype == None :
     raise getopt.GetoptError("missing --draw opt")
 #end if
+if bgcolor != None :
+    t.bgcolor(bgcolor)
+#end if
 
 for arg in args :
     # note pen_color and pen_size default to settings for previous curve, if any
@@ -314,18 +357,7 @@ for arg in args :
         elif keyword == "nrsteps" :
             nr_steps = int(value)
         elif keyword == "pencolor" or keyword == "pencolour" :
-            pen_color = value
-            if pen_color.find(",") >= 0 :
-                pen_color = tuple(float(i) for i in pen_color.split(",", 2))
-            elif pen_color.startswith("#") :
-                assert (len(pen_color) - 1) % 3 == 0, "invalid HTML colour spec"
-                seglen = (len(pen_color) - 1) // 3
-                pen_color = tuple \
-                  (
-                    int(pen_color[i * seglen + 1 : (i + 1) * seglen + 1], 16) / ((1 << seglen * 4) - 1)
-                    for i in (0, 1, 2)
-                  )
-            #end if
+            pen_color = parse_color(value)
         elif keyword == "pensize" :
             pen_size = float(value)
         elif keyword == "phase" :
