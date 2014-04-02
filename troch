@@ -546,7 +546,7 @@ for arg in args :
     if (
             None in (ring_radius, wheel_radius, wheel_frac, nr_steps)
         or
-            wheel_radius + ring_radius <= 0
+            wheel_radius + ring_radius == 0
         or
             nr_steps <= 0
     ) :
