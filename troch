@@ -58,9 +58,14 @@
 #         specifies the width of the curve. Defaults to the same as the previous
 #         curve, or 1 for the first curve.
 #     ring (required)
-#         specifies the radius of the stationary circle.
+#         specifies the relative radius of the stationary circle.
 #     wheel (required)
-#         specifies the radius of the moving circle.
+#         specifies the relative radius of the moving circle.
+#     scale
+#         a scale factor applied to the ring and wheel values to determine the
+#         actual radii. Separating this out allows small numbers to be used
+#         for the other two, making their relative factor relationships easier
+#         to see.
 #     frac (required)
 #         specifies the fraction of the wheel radius from the centre of the wheel
 #         at which the point is located that traces out the curve.
@@ -511,6 +516,7 @@ for arg in args :
     pen_size = None
     ring_radius = None
     wheel_radius = None
+    scale = 1
     wheel_frac = None
     nr_steps = None
     phase = 0
@@ -528,6 +534,8 @@ for arg in args :
             phase = float(value)
         elif keyword == "ring" :
             ring_radius = int(value)
+        elif keyword == "scale" :
+            scale = float(value)
         elif keyword == "wheel" :
             wheel_radius = int(value)
         else :
@@ -557,8 +565,8 @@ for arg in args :
     for i in range(0, nr_steps + 1) :
         theta_ring = 360 * nr_cycles * i / nr_steps
         theta_wheel = theta_ring * (ring_radius / wheel_radius + 1)
-        wheel_pos = Vec2D(ring_radius + wheel_radius, 0).rotate(theta_ring + phase)
-        curve_pos = wheel_pos + Vec2D(wheel_radius * wheel_frac, 0).rotate(theta_wheel)
+        wheel_pos = Vec2D((ring_radius + wheel_radius) * scale, 0).rotate(theta_ring + phase)
+        curve_pos = wheel_pos + Vec2D(wheel_radius * scale * wheel_frac, 0).rotate(theta_wheel)
         t.setpos(curve_pos)
         t.pendown() # for subsequent points
     #end for
