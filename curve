@@ -565,7 +565,6 @@ class LissaCurve(Curve) :
     "draws a Lissajous curve. For background, see <https://en.wikipedia.org/wiki/Lissajous_curve>."
 
     closed = True
-
     params = \
         {
             "x_amp" : float, # amplitude of curve along x-axis
@@ -597,13 +596,45 @@ class LissaCurve(Curve) :
 
 #end LissaCurve
 
+class RoseCurve(Curve) :
+    "draws a rose curve. For background, see <<https://en.wikipedia.org/wiki/Rose_curve>."
+
+    closed = True
+    params = \
+        {
+            "amplitude" : float, # amplitude of sine wave
+            "freq_denom" : int, # denominator of ratio defining frequency
+            "freq_numer" : int, # numerator of ratio defining frequency
+            "phase" : float, # phase angle for rotating curve
+            "radius" : float, # radius of curve
+        }
+
+    def __init__(self) :
+        self.phase = 0
+    #end __init__
+
+    def setup(self) :
+        # reduce frequency ratio to lowest terms
+        ratio = Fraction(self.freq_numer, self.freq_denom)
+        self.freq_numer, self.freq_denom = ratio.numerator, ratio.denominator
+    #end setup
+
+    def curve_func(self, t) :
+        phi = 2 * math.pi * t * self.freq_denom
+        theta = 2 * math.pi * (t + self.phase) * self.freq_numer
+        r = self.radius + math.sin(theta) * self.amplitude
+        return \
+            (r * math.cos(phi), r * math.sin(phi))
+    #end curve_func
+
+#end RoseCurve
+
 class TrochCurve(Curve) :
     "draws a hypotrochoid or epitrochoid curve. For background, see" \
     " <https://en.wikipedia.org/wiki/Spirograph>, <https://en.wikipedia.org/wiki/Epitrochoid>" \
     " and <https://en.wikipedia.org/wiki/Hypotrochoid>."
 
     closed = True
-
     params = \
         {
             "ring" : int, # radius of stationary ring
@@ -640,6 +671,7 @@ class TrochCurve(Curve) :
 curvetypes = \
     {
         "lissa" : LissaCurve,
+        "rose" : RoseCurve,
         "troch" : TrochCurve,
     }
 
