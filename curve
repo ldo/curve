@@ -621,8 +621,8 @@ for keyword, value in opts :
                 keyword, optargs = value[0], ()
             #end if
             opt_method = "opt_" + keyword
-            assert hasattr(t, opt_method), "%s drawtype has no option %s" % (items[0], keyword)
-            getattr(t, opt_method)(*optargs)
+            assert hasattr(d, opt_method), "%s drawtype has no option %s" % (items[0], keyword)
+            getattr(d, opt_method)(*optargs)
         #end for
     elif keyword == "--size" :
         items = value.split(":", 1)
