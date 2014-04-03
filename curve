@@ -90,11 +90,11 @@
 #        amplitude of the sine wave, the main parameter governing the size of the curve
 #     freq
 #        an integer or a ratio of two integers a/b that define the frequency of the sine wave.
-#     phase
-#        a phase angle for rotating the curve. Defaults to 0.
-#     radius
+#     offset
 #        an optional value to offset the centre of the wave from the centre of the
 #        pattern. Defaults to 0.
+#     phase
+#        a phase angle for rotating the curve. Defaults to 0.
 #
 # Valid keywords specific to the troch curve type are:
 #     ring (required)
@@ -122,7 +122,7 @@
 # draws a Lissajous curve on-screen, using turtle settings for maxmimum speed.
 #
 #     curve --draw=cairo:out=try.png --size=700:700 \
-#         rose:amplitude=300:freq=7/2:pensize=8:nrsteps=300:radius=30
+#         rose:amplitude=300:freq=7/2:pensize=8:nrsteps=300:offset=30
 #
 # draws a rose curve and saves the image into the file try.png.
 #
@@ -649,22 +649,22 @@ class RoseCurve(Curve) :
         {
             "amplitude" : float, # amplitude of sine wave
             "freq" : parse_ratio, #  frequency
+            "offset" : float, # offset of curve, defaults to 0
             "phase" : float, # phase angle for rotating curve
-            "radius" : float, # radius of curve, defaults to 0
         }
 
     def __init__(self) :
+        self.offset = 0
         self.phase = 0
-        self.radius = 0
     #end __init__
 
     def curve_func(self, t) :
-        # Note that the curve can still be traced twice in some situations, e.g.
-        # try a frequency of 3/5 and a radius of 0. But if the radius is set to nonzero,
-        # the two halves no longer overlap.
+        # Note that the curve can still be traced twice in some situations, namely where
+        # the frequency numerator and denominator are both odd, and the offset is zero.
+        # But if the offset is set to nonzero, the two halves no longer overlap.
         phi = 2 * math.pi * t * self.freq.denominator
         theta = 2 * math.pi * (t + self.phase) * self.freq.numerator
-        r = self.radius + math.sin(theta) * self.amplitude
+        r = self.offset + math.sin(theta) * self.amplitude
         return \
             (r * math.cos(phi), r * math.sin(phi))
     #end curve_func
