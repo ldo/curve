@@ -659,6 +659,9 @@ class RoseCurve(Curve) :
     #end __init__
 
     def curve_func(self, t) :
+        # Note that the curve can still be traced twice in some situations, e.g.
+        # try a frequency of 3/5 and a radius of 0. But if the radius is set to nonzero,
+        # the two halves no longer overlap.
         phi = 2 * math.pi * t * self.freq.denominator
         theta = 2 * math.pi * (t + self.phase) * self.freq.numerator
         r = self.radius + math.sin(theta) * self.amplitude
