@@ -1,11 +1,9 @@
 #!/usr/bin/python3
 #+
-# Generate epitrochoid and hypotrochoid patterns using various graphics systems.
-# For background, see <https://en.wikipedia.org/wiki/Spirograph>,
-# <https://en.wikipedia.org/wiki/Epitrochoid> and <https://en.wikipedia.org/wiki/Hypotrochoid>.
+# Generate various types of curves using various graphics systems.
 # Invoke this script as follows:
 #
-#     troch [options] curvespec [curvespec...]
+#     curve [options] curvespec [curvespec...]
 #
 # where the valid options are
 #
@@ -43,13 +41,19 @@
 #     --bgcolor/bgcolour=colourspec
 #            specifies the background colour to set before doing drawing.
 #     --size=w:h
-#            specifies the size of the drawing area.
+#            specifies the size of the drawing area. Note this mandatory
+#            for the Cairo drawtype.
 #
 # Each curvespec specifies the parameters for a curve to draw, and takes the form
 #
-#     keyword=value:keyword=value...
+#     curvetype:keyword=value:keyword=value...
 #
-# where the valid keywords are
+# where the curvetype specifies the general class of curve to draw, and the
+# keyword-value pairs specify parameters defining the exact curve to draw. Some
+# keywords are specific to the curve type, whereas others are common across
+# curve types.
+#
+# Keywords that are valid across all curve types are:
 #
 #     pencolor/pencolour
 #         specifies the pen colour to use to draw the curve. Defaults to the
@@ -57,10 +61,19 @@
 #     pensize
 #         specifies the width of the curve. Defaults to the same as the previous
 #         curve, or 1 for the first curve.
+#     nrsteps (required)
+#         the integer number of straight-line segments that make up the complete
+#         curve. A larger number makes for a more accurate (smoother) curve, at
+#         the expense of greater drawing time.
+#
+# The only currently-valid curve type is “troch” for a trochoid curve.
+# Valid keywords specific to this curve type are:
+#
 #     ring (required)
-#         specifies the relative radius of the stationary circle.
+#         specifies the relative radius of the stationary circle. Must be an
+#         integer
 #     wheel (required)
-#         specifies the relative radius of the moving circle.
+#         specifies the relative radius of the moving circle. Must be an integer
 #     scale
 #         a scale factor applied to the ring and wheel values to determine the
 #         actual radii. Separating this out allows small numbers to be used
@@ -69,10 +82,6 @@
 #     frac (required)
 #         specifies the fraction of the wheel radius from the centre of the wheel
 #         at which the point is located that traces out the curve.
-#     nrsteps (required)
-#         the number of straight-line segments that make up the complete curve.
-#         A larger number makes for a more accurate (smoother) curve, at the
-#         expense of greater drawing time.
 #     phase
 #         optional starting phase angle in degrees for this pattern. If omitted,
 #         defaults to 0.
@@ -186,6 +195,10 @@ class Drawer :
 #     moves the pen to the specified position, which can be a Vec2D, or 2 separate x and y
 #     arguments.
 #
+# close()
+#     closes the current curve by adding a segment from the end point back to the
+#     start point.
+#
 # done()
 #     called at the end of drawing.
 #-
@@ -194,6 +207,7 @@ class Drawer :
 #end Drawer
 
 class CairoDrawer(Drawer) :
+    "does drawing using Cairo graphics <http://cairographics.org/>."
 
     def __init__(self) :
         self.size = None
@@ -263,6 +277,10 @@ class CairoDrawer(Drawer) :
         (self.g.move_to, self.g.line_to)[self.drawing](newpos[0], newpos[1])
     #end setpos
 
+    def close(self) :
+        self.g.close_path()
+    #end close
+
     def startpath(self) :
         if not self.inpath :
             self.g.new_path()
@@ -290,6 +308,7 @@ class CairoDrawer(Drawer) :
 #end CairoDrawer
 
 class PostScriptDrawer(Drawer) :
+    "outputs PostScript <https://en.wikipedia.org/wiki/PostScript> drawing commands."
 
     def __init__(self) :
         self.w = sys.stdout.write
@@ -376,6 +395,10 @@ class PostScriptDrawer(Drawer) :
         self.currentpoint = Vec2D(x, y)
     #end setpos
 
+    def close(self) :
+        self.w("closepath\n")
+    #end close
+
     def finishpath(self) :
         if self.nrpoints != 0 :
             self.w("stroke\n")
@@ -395,6 +418,8 @@ class PostScriptDrawer(Drawer) :
 #end PostScriptDrawer
 
 class TurtleDrawer(Drawer) :
+    "does the drawing on-screen using the Turtle Graphics" \
+    " <https://docs.python.org/3/library/turtle.html> module."
 
     def __init__(self) :
         import turtle
@@ -402,11 +427,12 @@ class TurtleDrawer(Drawer) :
         for \
             method \
         in \
-            ("bgcolor", "pensize", "pencolor", "penup", "pendown",) \
+            ("bgcolor", "pensize", "pencolor", "pendown",) \
         :
             setattr(self, method, getattr(self.t, method))
         #end for
         self.track_heading = False
+        self.first_point = None
     #end __init__
 
     def opt_speed(self, newspeed) :
@@ -436,7 +462,15 @@ class TurtleDrawer(Drawer) :
         pass
     #end donesetup
 
+    def penup(self) :
+        self.t.penup()
+        self.first_point = None
+    #end penup
+
     def setpos(self, newpos) :
+        if self.first_point == None and self.t.isdown() :
+            self.first_point = self.t.position()
+        #end if
         if self.track_heading and self.t.isvisible() :
             prevpos = self.t.position()
             self.t.setheading \
@@ -446,6 +480,12 @@ class TurtleDrawer(Drawer) :
         #end if
         self.t.setpos(newpos)
     #end setpos
+
+    def close(self) :
+        if self.first_point != None and self.t.isdown() :
+            self.t.setpos(self.first_point)
+        #end if
+    #end close
 
     def done(self) :
         self.t.hideturtle()
@@ -459,6 +499,95 @@ drawtypes = \
         "cairo" : CairoDrawer,
         "postscript" : PostScriptDrawer,
         "turtle" : TurtleDrawer,
+    }
+
+def draw_curve(d, f, closed, nr_steps) :
+    "g is a Drawer instance, f is a function over [0, 1) returning a tuple of" \
+    " (x, y) coordinates, defining the curve to draw, and nr_steps is the" \
+    " number of straight-line segments to approximate the curve. if closed," \
+    " then the end and start points will be joined by an additional segment."
+    d.penup()
+    for i in range(0, nr_steps) :
+        d.setpos(f(i / nr_steps))
+        d.pendown() # for subsequent points
+    #end for
+    if closed :
+        d.close()
+    #end if
+#end draw_curve
+
+#+
+# Curve classes
+#-
+
+class Curve :
+#+
+# Subclasses should define the following members:
+#
+# params
+#     a dict mapping attribute names to functions that will convert strings
+#     to suitable values for those attributes. If an attribute is initialized
+#     to some value in the __init__ method, then specifying a value for that
+#     attribute is optional; otherwise, it is mandatory.
+#
+# closed
+#     whether the curve is closed.
+#
+# setup()
+#     optional, if present, will be called after setting of all options and before
+#     first call to curve_func.
+#
+# curve_func(t)
+#     maps a parameter value t ∈ [0, 1) onto a corresponding (x, y) coordinate tuple
+#     for defining the curve.
+#-
+
+    pass
+#end Curve
+
+class TrochCurve(Curve) :
+    "draws a hypotrochoid or epitrochoid curve. For background, see" \
+    " <https://en.wikipedia.org/wiki/Spirograph>, <https://en.wikipedia.org/wiki/Epitrochoid>" \
+    " and <https://en.wikipedia.org/wiki/Hypotrochoid>."
+
+    closed = True
+
+    params = \
+        {
+            "ring" : int, # radius of stationary ring
+            "wheel" : int, # radius of moving wheel
+            "scale" : float,
+              # scale factor applied to ring and wheel radius, allowing
+              # small integers to be used for above to make their relative
+              # factors more obvious
+            "frac" : float, # fraction of wheel radius from centre for location of curve point
+            "phase" : float, # phase angle for rotating entire curve
+        }
+
+    def __init__(self) :
+        self.scale = 1
+        self.phase = 0
+    #end __init__
+
+    def setup(self) :
+        ratio = Fraction(self.ring, self.wheel)
+        self.nr_cycles = ratio.denominator # to produce one complete traversal of curve
+    #end setup
+
+    def curve_func(self, t) :
+        theta_ring = 360 * self.nr_cycles * t
+        theta_wheel = theta_ring * (self.ring / self.wheel + 1)
+        wheel_pos = Vec2D((self.ring + self.wheel) * self.scale, 0).rotate(theta_ring + self.phase)
+        curve_pos = wheel_pos + Vec2D(self.wheel * self.scale * self.frac, 0).rotate(theta_wheel)
+        return \
+            tuple(curve_pos)
+    #end curve_func
+
+#end TrochCurve
+
+curvetypes = \
+    {
+        "troch" : TrochCurve,
     }
 
 #+
@@ -483,7 +612,7 @@ for keyword, value in opts :
             raise getopt.GetoptError("only one --draw opt allowed")
         #end if
         drawtype = drawtypes[items[0]]
-        t = drawtype()
+        d = drawtype()
         for item in items[1:] :
             value = item.split("=", 1)
             if len(value) == 2 :
@@ -504,71 +633,60 @@ if drawtype == None :
     raise getopt.GetoptError("missing --draw opt")
 #end if
 if drawsize != None :
-    t.setsize(drawsize)
+    d.setsize(drawsize)
 #end if
 if bgcolor != None :
-    t.bgcolor(bgcolor)
+    d.bgcolor(bgcolor)
 #end if
-t.donesetup()
+d.donesetup()
 for arg in args :
     # note pen_color and pen_size default to settings for previous curve, if any
     pen_color = None
     pen_size = None
-    ring_radius = None
-    wheel_radius = None
-    scale = 1
-    wheel_frac = None
     nr_steps = None
-    phase = 0
-    for item in arg.split(":") :
+    items = arg.split(":")
+    if len(items) == 0 :
+        raise getopt.GetoptError("missing curve type")
+    #end if
+    curvename = items[0]
+    items = items[1:]
+    curve = curvetypes[curvename]()
+    for item in items :
         keyword, value = item.split("=", 1)
-        if keyword == "frac" :
-            wheel_frac = float(value)
-        elif keyword == "nrsteps" :
+        if keyword == "nrsteps" :
             nr_steps = int(value)
         elif keyword == "pencolor" or keyword == "pencolour" :
             pen_color = parse_color_opt(value)
         elif keyword == "pensize" :
             pen_size = float(value)
-        elif keyword == "phase" :
-            phase = float(value)
-        elif keyword == "ring" :
-            ring_radius = int(value)
-        elif keyword == "scale" :
-            scale = float(value)
-        elif keyword == "wheel" :
-            wheel_radius = int(value)
+        elif keyword in curve.params :
+            setattr(curve, keyword, curve.params[keyword](value))
         else :
-            raise getopt.GetoptError("invalid curve keyword %s" % keyword)
+            raise getopt.GetoptError("no such curve param %s" % keyword)
         #end if
     #end for
-    # wheel_radius is +ve for epitrochoid, -ve for hypotrochoid
-    if (
-            None in (ring_radius, wheel_radius, wheel_frac, nr_steps)
-        or
-            wheel_radius + ring_radius == 0
-        or
-            nr_steps <= 0
-    ) :
-        raise getopt.GetoptError("invalid or missing curve parameters")
+    missing = set \
+      (
+        keyword for keyword in curve.params if not hasattr(curve, keyword)
+      )
+    if len(missing) != 0 :
+        raise getopt.GetoptError \
+          (
+            "missing parameters for %s curve: %s" % (curvename, ", ".join(tuple(missing)))
+          )
     #end if
-    ratio = Fraction(ring_radius, wheel_radius)
-    nr_cycles = ratio.denominator # to produce one complete traversal of curve
-
+    if nr_steps == None :
+        raise getopt.GetoptError("forgot to specify nrsteps")
+    #end if
     if pen_color != None :
-        t.pencolor(pen_color)
+        d.pencolor(pen_color)
     #end if
     if pen_size != None :
-        t.pensize(pen_size)
+        d.pensize(pen_size)
     #end if
-    t.penup() # for first point
-    for i in range(0, nr_steps + 1) :
-        theta_ring = 360 * nr_cycles * i / nr_steps
-        theta_wheel = theta_ring * (ring_radius / wheel_radius + 1)
-        wheel_pos = Vec2D((ring_radius + wheel_radius) * scale, 0).rotate(theta_ring + phase)
-        curve_pos = wheel_pos + Vec2D(wheel_radius * scale * wheel_frac, 0).rotate(theta_wheel)
-        t.setpos(curve_pos)
-        t.pendown() # for subsequent points
-    #end for
+    if hasattr(curve, "setup") :
+        curve.setup()
+    #end if
+    draw_curve(d, curve.curve_func, curve.closed, nr_steps)
 #end for
-t.done()
+d.done()
