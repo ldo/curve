@@ -606,11 +606,12 @@ class RoseCurve(Curve) :
             "freq_denom" : int, # denominator of ratio defining frequency
             "freq_numer" : int, # numerator of ratio defining frequency
             "phase" : float, # phase angle for rotating curve
-            "radius" : float, # radius of curve
+            "radius" : float, # radius of curve, defaults to 0
         }
 
     def __init__(self) :
         self.phase = 0
+        self.radius = 0
     #end __init__
 
     def setup(self) :
