@@ -581,6 +581,12 @@ class LissaCurve(Curve) :
         self.y_phase = 0
     #end __init__
 
+    def setup(self) :
+        # reduce relative frequencies to lowest terms
+        freq_ratio = Fraction(self.x_freq, self.y_freq)
+        self.x_freq, self.y_freq = freq_ratio.numerator, freq_ratio.denominator
+    #end setup
+
     def curve_func(self, t) :
         return \
             (
