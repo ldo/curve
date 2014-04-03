@@ -88,9 +88,8 @@
 # Valid keywords specific to the rose curve type are:
 #     amplitude (required)
 #        amplitude of the sine wave, the main parameter governing the size of the curve
-#     freq_numer, freq_denom
-#        a pair of integers that define the frequency of the sine wave as freq_numer ÷ freq_denom.
-#        Given separately to allow any rational value.
+#     freq
+#        an integer or a ratio of two integers a/b that define the frequency of the sine wave.
 #     phase
 #        a phase angle for rotating the curve. Defaults to 0.
 #     radius
@@ -123,7 +122,7 @@
 # draws a Lissajous curve on-screen, using turtle settings for maxmimum speed.
 #
 #     curve --draw=cairo:out=try.png --size=700:700 \
-#         rose:amplitude=300:freq_numer=7:freq_denom=2:pensize=8:nrsteps=300:radius=30
+#         rose:amplitude=300:freq=7/2:pensize=8:nrsteps=300:radius=30
 #
 # draws a rose curve and saves the image into the file try.png.
 #
@@ -148,6 +147,21 @@ import getopt
 #+
 # Useful stuff
 #-
+
+def parse_ratio(ratiostr) :
+    "parses ratiostr as a single integer, or as two integers separated by a" \
+    " slash: a/b representing a ratio. returns a Fraction object representing" \
+    " the value in either case."
+    splitpos = ratiostr.find("/")
+    if splitpos >= 0 :
+        numer, denom = int(ratiostr[:splitpos]), int(ratiostr[splitpos + 1:])
+    else :
+        numer = int(ratiostr)
+        denom = 1
+    #end if
+    return \
+        Fraction(numer, denom)
+#end parse_ratio
 
 def parse_color_opt(colorstr) :
     if colorstr.find(",") >= 0 :
@@ -634,8 +648,7 @@ class RoseCurve(Curve) :
     params = \
         {
             "amplitude" : float, # amplitude of sine wave
-            "freq_denom" : int, # denominator of ratio defining frequency
-            "freq_numer" : int, # numerator of ratio defining frequency
+            "freq" : parse_ratio, #  frequency
             "phase" : float, # phase angle for rotating curve
             "radius" : float, # radius of curve, defaults to 0
         }
@@ -645,15 +658,9 @@ class RoseCurve(Curve) :
         self.radius = 0
     #end __init__
 
-    def setup(self) :
-        # reduce frequency ratio to lowest terms
-        ratio = Fraction(self.freq_numer, self.freq_denom)
-        self.freq_numer, self.freq_denom = ratio.numerator, ratio.denominator
-    #end setup
-
     def curve_func(self, t) :
-        phi = 2 * math.pi * t * self.freq_denom
-        theta = 2 * math.pi * (t + self.phase) * self.freq_numer
+        phi = 2 * math.pi * t * self.freq.denominator
+        theta = 2 * math.pi * (t + self.phase) * self.freq.numerator
         r = self.radius + math.sin(theta) * self.amplitude
         return \
             (r * math.cos(phi), r * math.sin(phi))
