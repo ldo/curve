@@ -68,6 +68,7 @@
 #
 # The currently-valid curve types are:
 #     lissa -- Lissajous curve
+#     rose -- rose curve
 #     troch -- trochoid curve
 #
 # Valid keywords specific to the lissa curve type are:
@@ -83,6 +84,18 @@
 #        frequency of curve along y-axis
 #     y_phase
 #        phase of curve along y-axis, defaults to 0
+#
+# Valid keywords specific to the rose curve type are:
+#     amplitude (required)
+#        amplitude of the sine wave, the main parameter governing the size of the curve
+#     freq_numer, freq_denom
+#        a pair of integers that define the frequency of the sine wave as freq_numer ÷ freq_denom.
+#        Given separately to allow any rational value.
+#     phase
+#        a phase angle for rotating the curve. Defaults to 0.
+#     radius
+#        an optional value to offset the centre of the wave from the centre of the
+#        pattern. Defaults to 0.
 #
 # Valid keywords specific to the troch curve type are:
 #     ring (required)
@@ -102,7 +115,8 @@
 #         optional starting phase angle in degrees for this pattern. If omitted,
 #         defaults to 0.
 #
-# Written by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>.
+#
+# Copyright 2014 by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>.
 #-
 
 import sys
