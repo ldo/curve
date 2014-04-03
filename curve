@@ -33,7 +33,7 @@
 #            hideturtle
 #                hide the turtle to speed up drawing.
 #            speed=speed
-#                speed of turtle movement.
+#                set speed of turtle movement.
 #            trackheading
 #                causes the turtle to always face in the direction it is moving.
 #                Slows down the drawing, which is why it’s not the default.
@@ -115,6 +115,23 @@
 #         optional starting phase angle in degrees for this pattern. If omitted,
 #         defaults to 0.
 #
+# Examples:
+#
+#     curve --draw=turtle:hideturtle:speed=fastest \
+#         lissa:x_amp=200:y_amp=200:x_freq=3:y_freq=2:nrsteps=200:x_phase=-.2:pensize=4
+#
+# draws a Lissajous curve on-screen, using turtle settings for maxmimum speed.
+#
+#     curve --draw=cairo:out=try.png --size=700:700 \
+#         rose:amplitude=300:freq_numer=7:freq_denom=2:pensize=8:nrsteps=300:radius=30
+#
+# draws a rose curve and saves the image into the file try.png.
+#
+#     curve --draw=postscript:out=try.ps --bgcolor=lavender \
+#         troch:ring=17:wheel=-6:scale=10:frac=3:nrsteps=500:pensize=12:pencolor=orange
+#
+# generates PostScript code for filling the background with a lavender colour, and drawing
+# a trochoid curve on top of it, into the file try.ps.
 #
 # Copyright 2014 by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>.
 #-
