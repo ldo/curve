@@ -51,7 +51,9 @@
 # where the curvetype specifies the general class of curve to draw, and the
 # keyword-value pairs specify parameters defining the exact curve to draw. Some
 # keywords are specific to the curve type, whereas others are common across
-# curve types.
+# curve types. If curvetype is the empty string, then it defaults to the same
+# curvetype and same settings as the previous curvespec (this is not allowed for
+# the first curvespec).
 #
 # Keywords that are valid across all curve types are:
 #
@@ -767,18 +769,21 @@ if bgcolor != None :
     d.bgcolor(bgcolor)
 #end if
 d.donesetup()
+curvename = None
 for arg in args :
     # note pen_color and pen_size default to settings for previous curve, if any
     pen_color = None
     pen_size = None
-    nr_steps = None
     items = arg.split(":")
     if len(items) == 0 :
         raise getopt.GetoptError("missing curve type")
     #end if
-    curvename = items[0]
+    if curvename == None or len(items[0]) != 0 :
+        curvename = items[0]
+        curve = curvetypes[curvename]()
+        nr_steps = None
+    #end if
     items = items[1:]
-    curve = curvetypes[curvename]()
     for item in items :
         keyword, value = item.split("=", 1)
         if keyword == "nrsteps" :
