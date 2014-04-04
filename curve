@@ -40,6 +40,9 @@
 #
 #     --bgcolor/bgcolour=colourspec
 #            specifies the background colour to set before doing drawing.
+#     --nrsteps=nrsteps
+#            optionally specify a default nrsteps value for curvespecs that
+#            do not specify their own.
 #     --size=w:h
 #            specifies the size of the drawing area. Note this mandatory
 #            for the Cairo drawtype.
@@ -63,7 +66,7 @@
 #     pensize
 #         specifies the width of the curve. Defaults to the same as the previous
 #         curve, or 1 for the first curve.
-#     nrsteps (required)
+#     nrsteps (required unless --nrsteps is specified)
 #         the integer number of straight-line segments that make up the complete
 #         curve. A larger number makes for a more accurate (smoother) curve, at
 #         the expense of greater drawing time.
@@ -728,11 +731,12 @@ curvetypes = \
   (
     sys.argv[1:],
     "",
-    ["bgcolor=", "bgcolour=", "draw=", "size="]
+    ["bgcolor=", "bgcolour=", "draw=", "nrsteps=", "size="]
   )
 drawtype = None
 bgcolor = None
 drawsize = None
+default_nrsteps = None
 for keyword, value in opts :
     if keyword == "--bgcolor" or keyword == "--bgcolour" :
         bgcolor = parse_color_opt(value)
@@ -754,6 +758,8 @@ for keyword, value in opts :
             assert hasattr(d, opt_method), "%s drawtype has no option %s" % (items[0], keyword)
             getattr(d, opt_method)(*optargs)
         #end for
+    elif keyword == "--nrsteps" :
+        default_nrsteps = int(value)
     elif keyword == "--size" :
         items = value.split(":", 1)
         drawsize = Vec2D(int(items[0]), int(items[1]))
@@ -781,7 +787,7 @@ for arg in args :
     if curvename == None or len(items[0]) != 0 :
         curvename = items[0]
         curve = curvetypes[curvename]()
-        nr_steps = None
+        nr_steps = default_nrsteps
     #end if
     items = items[1:]
     for item in items :
