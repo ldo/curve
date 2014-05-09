@@ -120,6 +120,16 @@
 #         optional starting phase angle in degrees for this pattern. If omitted,
 #         defaults to 0.
 #
+# A colour specification can take the following forms:
+#     * a colour name from the list in /usr/share/X11/rgb.txt
+#     * three colour components, each in the range [0, 1] separated by commas,
+#       optionally preceded by a colour space specification and another comma:
+#           <r>,<g>,<b>
+#           rgb,<r>,<g>,<b>
+#           hsv,<h>,<s>,<v>
+#       Currently-recognized colour spaces are "rgb" and "hsv", with "rgb" being
+#       the default if not specified.
+#
 # Examples:
 #
 #     curve --draw=turtle:hideturtle:speed=fastest \
@@ -138,6 +148,12 @@
 # generates PostScript code for filling the background with a lavender colour, and drawing
 # a trochoid curve on top of it, into the file try.ps.
 #
+#     curve --draw=turtle --bgcolor=hsv,0.67,.08,.98 \
+#         troch:ring=17:wheel=-6:scale=10:frac=3:nrsteps=500:pensize=12:pencolor=hsv,.11,1,1
+#
+# does the same trochoid curve as the previous example, specifying the colours in HSV
+# form.
+#
 # Copyright 2014 by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>.
 # Licensed under CC-BY-SA <http://creativecommons.org/licenses/by-sa/4.0/>.
 #-
@@ -148,6 +164,7 @@ import sys
 import math
 from fractions import \
     Fraction
+import colorsys
 import cairo
 from turtle import \
     Vec2D
@@ -174,7 +191,22 @@ def parse_ratio(ratiostr) :
 
 def parse_color_opt(colorstr) :
     if colorstr.find(",") >= 0 :
-        pen_color = tuple(float(i) for i in colorstr.split(",", 2))
+        items = colorstr.split(",")
+        if len(items) == 4 :
+            space = items[0].lower()
+            items = items[1:]
+        elif len(items) == 3 :
+            space = "rgb"
+        else :
+            raise ValueError("colour spec must be [space,]comp1,comp2,comp3")
+        #end if
+        pen_color = \
+            (
+                {
+                    "hsv" : colorsys.hsv_to_rgb,
+                    "rgb" : lambda r, g, b : (r, g, b),
+                }[space](*tuple(float(i) for i in items))
+            )
     elif colorstr.startswith("#") :
         assert (len(colorstr) - 1) % 3 == 0, "invalid HTML colour spec"
         seglen = (len(colorstr) - 1) // 3
