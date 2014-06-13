@@ -825,7 +825,7 @@ for arg in args :
     items = items[1:]
     for item in items :
         parts = item.split("=", 1)
-        assert len(parts) == 2, "params must have form keyword=value"
+        assert len(parts) == 2, "param must have form keyword=value: %s" % item
         keyword, value = parts
         if keyword == "nrsteps" :
             nr_steps = int(value)
