@@ -794,6 +794,7 @@ for keyword, value in opts :
         default_nrsteps = int(value)
     elif keyword == "--size" :
         items = value.split(":", 1)
+        assert len(items) == 2, "--size must be h:w"
         drawsize = Vec2D(int(items[0]), int(items[1]))
     #end if
 #end for
@@ -823,7 +824,9 @@ for arg in args :
     #end if
     items = items[1:]
     for item in items :
-        keyword, value = item.split("=", 1)
+        parts = item.split("=", 1)
+        assert len(parts) == 2, "params must have form keyword=value"
+        keyword, value = parts
         if keyword == "nrsteps" :
             nr_steps = int(value)
         elif keyword == "pencolor" or keyword == "pencolour" :
