@@ -476,7 +476,7 @@ class PostScriptDrawer(Drawer) :
 
     def setpos(self, newpos) :
         x, y = newpos[0], newpos[1]
-        if self.nrpoints == 500 : # actually level 2 and later have no limit? 
+        if self.nrpoints == 500 : # actually level 2 and later have no limit?
             self.finishpath()
         #end if
         if self.nrpoints == 0 :
