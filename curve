@@ -537,6 +537,9 @@ class TurtleDrawer(Drawer) :
 
     def opt_speed(self, newspeed) :
         self.t.tracer(1, round(self.default_delay / float(newspeed)))
+          # setting the first arg to anything other than 1 causes the whole
+          # drawing to update instantly, so I change only the second arg
+          # for nice speed control
     #end opt_speed
 
     def opt_hideturtle(self) :
