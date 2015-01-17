@@ -32,8 +32,8 @@
 #        For the turtle drawtype, the drawoptions are:
 #            hideturtle
 #                hide the turtle to speed up drawing.
-#            speed=speed
-#                set speed of turtle movement.
+#            speed=ratio
+#                set relative speed of turtle movement.
 #            trackheading
 #                causes the turtle to always face in the direction it is moving.
 #                Slows down the drawing, which is why it’s not the default.
@@ -131,10 +131,10 @@
 #
 # Examples:
 #
-#     curve --draw=turtle:hideturtle:speed=fastest \
+#     curve --draw=turtle:hideturtle:speed=2 \
 #         lissa:x_amp=200:y_amp=200:x_freq=3:y_freq=2:nrsteps=200:x_phase=-.2:pensize=4
 #
-# draws a Lissajous curve on-screen, using turtle settings for maxmimum speed.
+# draws a Lissajous curve on-screen, animating at twice normal speed.
 #
 #     curve --draw=cairo:out=try.png --size=700:700 \
 #         rose:amplitude=300:freq=7/2:pensize=8:nrsteps=300:offset=30
@@ -532,15 +532,11 @@ class TurtleDrawer(Drawer) :
         #end for
         self.track_heading = False
         self.first_point = None
+        self.default_delay = self.t.delay()
     #end __init__
 
     def opt_speed(self, newspeed) :
-        try :
-            speedval = int(newspeed)
-        except ValueError :
-            speedval = newspeed
-        #end try
-        self.t.speed(speedval)
+        self.t.tracer(1, round(self.default_delay / float(newspeed)))
     #end opt_speed
 
     def opt_hideturtle(self) :
