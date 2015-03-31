@@ -162,9 +162,11 @@ import math
 from fractions import \
     Fraction
 import colorsys
-import cairo
-from turtle import \
-    Vec2D
+import qahirah as qah
+from qahirah import \
+    CAIRO, \
+    Colour, \
+    Vector
 import getopt
 
 #+
@@ -291,7 +293,7 @@ class Drawer :
 #     resumes drawing lines on subsequent pen movements.
 #
 # setpos(p)
-#     moves the pen to the specified position, which can be a Vec2D, or 2 separate x and y
+#     moves the pen to the specified position, which can be a Vector, or 2 separate x and y
 #     arguments.
 #
 # close()
@@ -306,12 +308,13 @@ class Drawer :
 #end Drawer
 
 class CairoDrawer(Drawer) :
-    "does drawing using Cairo graphics <http://cairographics.org/>."
+    "does drawing using Cairo graphics <http://cairographics.org/> via the" \
+    " Qahirah wrapper <https://github.com/ldo/qahirah>."
 
     def __init__(self) :
         self.size = None
-        self.bg_color = (1, 1, 1)
-        self.pen_color = (0, 0, 0)
+        self.bg_color = Colour.grey(1)
+        self.pen_color = Colour.grey(0)
         self.pen_size = 1
         self.scale_factor = 1.0
         self.outfilename = None
@@ -326,30 +329,31 @@ class CairoDrawer(Drawer) :
     #end opt_scale
 
     def setsize(self, newsize) :
-        self.size = newsize
+        self.size = Vector.from_tuple(newsize)
     #end setsize
 
     def bgcolor(self, *args) :
-        self.bg_color = parse_color_args(args)
+        self.bg_color = Colour.from_rgba(parse_color_args(args))
     #end bgcolor
 
     def donesetup(self) :
         assert self.size != None, "forgot to set drawing size"
         assert self.outfilename != None, "forgot to set output filename"
-        self.pix = cairo.ImageSurface \
+        self.pix = qah.ImageSurface.create \
           (
-            cairo.FORMAT_RGB24, # format
-            self.size[0], # width
-            self.size[1] # height
+            format = CAIRO.FORMAT_RGB24,
+            dimensions = self.size
           )
-        self.g = cairo.Context(self.pix)
-        self.g.set_operator(cairo.OPERATOR_SOURCE)
-        self.g.translate(self.size[0] / 2, self.size[1] / 2)
-        self.g.scale(self.scale_factor, self.scale_factor)
-        self.g.set_source_rgb(*self.bg_color)
-        self.g.paint()
-        self.g.new_path()
-        self.g.move_to(0, 0)
+        self.g = \
+            (qah.Context.create(self.pix)
+                .set_operator(CAIRO.OPERATOR_SOURCE)
+                .translate(self.size / 2)
+                .scale((self.scale_factor, self.scale_factor))
+                .set_source_colour(self.bg_color)
+                .paint()
+                .new_path()
+                .move_to((0, 0))
+            )
         self.inpath = True
         self.drawing = True
     #end donesetup
@@ -359,7 +363,7 @@ class CairoDrawer(Drawer) :
     #end pensize
 
     def pencolor(self, *args) :
-        self.pen_color = parse_color_args(args)
+        self.pen_color = Colour.from_rgba(parse_color_args(args))
     #end pencolor
 
     def penup(self) :
@@ -373,7 +377,7 @@ class CairoDrawer(Drawer) :
 
     def setpos(self, newpos) :
         self.startpath()
-        (self.g.move_to, self.g.line_to)[self.drawing](newpos[0], newpos[1])
+        (self.g.move_to, self.g.line_to)[self.drawing](newpos)
     #end setpos
 
     def close(self) :
@@ -382,9 +386,11 @@ class CairoDrawer(Drawer) :
 
     def startpath(self) :
         if not self.inpath :
-            self.g.new_path()
-            self.g.set_source_rgb(*self.pen_color)
-            self.g.set_line_width(self.pen_size)
+            (self.g
+                .new_path()
+                .set_source_colour(Colour.from_rgba(self.pen_color))
+                .set_line_width(self.pen_size)
+            )
             self.inpath = True
         #end if
     #end startpath
@@ -491,7 +497,7 @@ class PostScriptDrawer(Drawer) :
         #end if
         self.w("%.1f %.1f %s\n" % (x, y, ("moveto", "lineto")[self.drawing]))
         self.nrpoints += 1
-        self.currentpoint = Vec2D(x, y)
+        self.currentpoint = Vector(x, y)
     #end setpos
 
     def close(self) :
@@ -739,8 +745,8 @@ class TrochCurve(Curve) :
     def curve_func(self, t) :
         theta_ring = 360 * self.nr_cycles * t
         theta_wheel = theta_ring * (self.ring / self.wheel + 1)
-        wheel_pos = Vec2D((self.ring + self.wheel) * self.scale, 0).rotate(theta_ring + self.phase)
-        curve_pos = wheel_pos + Vec2D(self.wheel * self.scale * self.frac, 0).rotate(theta_wheel)
+        wheel_pos = Vector((self.ring + self.wheel) * self.scale, 0).rotate((theta_ring + self.phase) * qah.deg)
+        curve_pos = wheel_pos + Vector(self.wheel * self.scale * self.frac, 0).rotate(theta_wheel * qah.deg)
         return \
             tuple(curve_pos)
     #end curve_func
@@ -794,7 +800,7 @@ for keyword, value in opts :
     elif keyword == "--size" :
         items = value.split(":", 1)
         assert len(items) == 2, "--size must be h:w"
-        drawsize = Vec2D(int(items[0]), int(items[1]))
+        drawsize = Vector(int(items[0]), int(items[1]))
     #end if
 #end for
 if drawtype == None :
