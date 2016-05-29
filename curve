@@ -222,7 +222,7 @@ def parse_color_opt(colorstr) :
 
 def parse_color_args(args) :
     if len(args) == 1 and type(args[0]) == str :
-        newcolor = Colour.x11[args[0]]
+        newcolor = tuple(Colour.x11[args[0]])[:3]
     elif len(args) == 1 and type(args[0]) == tuple and len(args[0]) == 3 :
         newcolor = args[0]
     elif len(args) == 3 :
