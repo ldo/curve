@@ -583,17 +583,26 @@ drawtypes = \
         "turtle" : TurtleDrawer,
     }
 
-def draw_curve(d, f, closed, nr_steps) :
-    "g is a Drawer instance, f is a function over [0, 1) returning a tuple of" \
-    " (x, y) coordinates, defining the curve to draw, and nr_steps is the" \
-    " number of straight-line segments to approximate the curve. if closed," \
-    " then the end and start points will be joined by an additional segment."
-    d.penup()
+def draw_curve(d, c, nr_steps) :
+    "d is a Drawer instance, c is a Curve instance, and nr_steps is the" \
+    " number of straight-line segments to approximate the curve."
+    if hasattr(c, "subcurve_func") :
+        subcurve_func = c.subcurve_func
+    else :
+        subcurve_func = lambda t : 0
+    #end if
+    last_subcurve = None
     for i in range(0, nr_steps) :
-        d.setpos(f(i / nr_steps))
+        t = i / nr_steps
+        subcurve = subcurve_func(t)
+        if subcurve != last_subcurve :
+            d.penup()
+            last_subcurve = subcurve
+        #end if
+        d.setpos(c.curve_func(t))
         d.pendown() # for subsequent points
     #end for
-    if closed :
+    if c.closed :
         d.close()
     #end if
 #end draw_curve
@@ -627,6 +636,11 @@ class Curve :
 # curve_func(t)
 #     maps a parameter value t ∈ [0, 1) onto a corresponding (x, y) coordinate tuple
 #     for defining the curve.
+#
+# subcurve_func(t)
+#     optional, returns an integer which, when it changes from the previous value,
+#     indicates that a new subcurve is starting which should not be joined to the
+#     previous one.
 #-
 
     pass
@@ -697,6 +711,15 @@ class MaurerCurve(Curve) :
         return \
             self.mod
     #end nr_steps
+
+    if False :
+
+        def subcurve_func(self, t) :
+            return \
+                math.floor(t * self.k)
+        #end subcurve_func
+
+    #end if
 
     def curve_func(self, t) :
         subcurve = math.floor(t * self.k)
@@ -897,6 +920,6 @@ for arg in args :
     if hasattr(curve, "setup") :
         curve.setup()
     #end if
-    draw_curve(d, curve.curve_func, curve.closed, nr_steps)
+    draw_curve(d, curve, nr_steps)
 #end for
 d.done()
