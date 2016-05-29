@@ -153,14 +153,15 @@
 # does the same trochoid curve as the previous example, specifying the colours in HSV
 # form.
 #
-# Copyright 2014 by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>.
+# Copyright 2014, 2016 by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>.
 # Licensed under CC-BY-SA <http://creativecommons.org/licenses/by-sa/4.0/>.
 #-
 
 import sys
 import math
 from fractions import \
-    Fraction
+    Fraction, \
+    gcd
 import colorsys
 import qahirah as qah
 from qahirah import \
@@ -614,6 +615,11 @@ class Curve :
 # closed
 #     whether the curve is closed.
 #
+# nr_steps
+#     optional, indicates the curve is not really a curve, but is made of the
+#     specified number of straight-line segments. Typically will be a property
+#     that needs to be computed from the given curve parameters.
+#
 # setup()
 #     optional, if present, will be called after setting of all options and before
 #     first call to curve_func.
@@ -660,6 +666,49 @@ class LissaCurve(Curve) :
     #end curve_func
 
 #end LissaCurve
+
+class MaurerCurve(Curve) :
+    "draws a Maurer rose curve. For background, see" \
+    " Peter M Maurer, “A Rose is a Rose...”" \
+    " <http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.97.8141&rep=rep1&type=pdf>."
+
+    closed = True
+    params = \
+        {
+            "amplitude" : float, # amplitude of sine wave
+            "delta" : int, # the number of steps between successive curve points
+            "mod" : int, # modulus (total number of steps around curve)
+            "freq" : int,
+            "offset" : float, # offset of curve, defaults to 0
+            "phase" : float, # phase angle for rotating curve
+        }
+
+    def __init__(self) :
+        self.offset = 0
+        self.phase = 0
+    #end __init__
+
+    def setup(self) :
+        self.k = gcd(self.delta, self.mod)
+    #end setup
+
+    @property
+    def nr_steps(self) :
+        return \
+            self.mod
+    #end nr_steps
+
+    def curve_func(self, t) :
+        subcurve = math.floor(t * self.k)
+        step = round((t * self.delta - subcurve) * self.mod) % self.mod
+        phi = 2 * math.pi * (step + subcurve) / self.mod
+        theta = 2 * math.pi * ((step + subcurve) * self.freq / self.mod + self.phase)
+        r = self.offset + math.sin(theta) * self.amplitude
+        return \
+            (r * math.cos(phi), r * math.sin(phi))
+    #end curve_func
+
+#end MaurerCurve
 
 class RoseCurve(Curve) :
     "draws a rose curve. For background, see <<https://en.wikipedia.org/wiki/Rose_curve>."
@@ -733,6 +782,7 @@ class TrochCurve(Curve) :
 curvetypes = \
     {
         "lissa" : LissaCurve,
+        "maurer" : MaurerCurve,
         "rose" : RoseCurve,
         "troch" : TrochCurve,
     }
@@ -810,6 +860,7 @@ for arg in args :
         assert len(parts) == 2, "param must have form keyword=value: %s" % item
         keyword, value = parts
         if keyword == "nrsteps" :
+            assert not hasattr(curve, "nr_steps"), "curve provides its own value for nrsteps"
             nr_steps = int(value)
         elif keyword == "pencolor" or keyword == "pencolour" :
             pen_color = parse_color_opt(value)
@@ -830,6 +881,9 @@ for arg in args :
           (
             "missing parameters for %s curve: %s" % (curvename, ", ".join(tuple(missing)))
           )
+    #end if
+    if hasattr(curve, "nr_steps") :
+        nr_steps = curve.nr_steps
     #end if
     if nr_steps == None :
         raise getopt.GetoptError("forgot to specify nrsteps")
