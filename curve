@@ -220,32 +220,9 @@ def parse_color_opt(colorstr) :
     return pen_color
 #end parse_color_opt
 
-color_names = {} # mapping of traditional X11 colour names to (r, g, b) tuples
-
-def load_color_names() :
-    for line in open("/usr/share/X11/rgb.txt", "r") :
-        if not line.startswith("!") :
-            line = line.strip()
-            for junk in ("\t", "  ") :
-                while True :
-                    line2 = line.replace(junk, " ")
-                    if line2 == line :
-                        break
-                    line = line2
-                #end while
-            #end for
-            r, g, b, name = line.split(" ", 3)
-            r, g, b = int(r), int(g), int(b)
-            color_names[name.lower()] = (r / 255, g / 255, b / 255)
-        #end if
-    #end line
-#end load_color_names
-load_color_names()
-del load_color_names
-
 def parse_color_args(args) :
     if len(args) == 1 and type(args[0]) == str :
-        newcolor = color_names[args[0]]
+        newcolor = Colour.x11[args[0]]
     elif len(args) == 1 and type(args[0]) == tuple and len(args[0]) == 3 :
         newcolor = args[0]
     elif len(args) == 3 :
