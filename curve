@@ -73,6 +73,7 @@
 #
 # The currently-valid curve types are:
 #     lissa -- Lissajous curve
+#     maurer -- Maurer rose
 #     rose -- rose curve
 #     troch -- trochoid curve
 #
@@ -89,6 +90,24 @@
 #        frequency of curve along y-axis
 #     y_phase
 #        phase of curve along y-axis, defaults to 0
+#
+# Valid keywords specific to the maurer curve type are:
+#     amplitude (required)
+#        amplitude of the sine wave, the main parameter governing the size of the curve
+#     delta (required)
+#        an integer specifying the number of steps around the circle for successive curve
+#        points
+#     freq (required)
+#        an integer specifying the frequency multiplier
+#     mod (required)
+#        an integer defining the number of steps into which the circle is divided
+#     offset
+#        an optional value to offset the centre of the wave from the centre of the
+#        pattern. Defaults to 0.
+#     phase
+#        a phase angle for rotating the curve. Defaults to 0.
+#
+# Note that nrsteps is not applicable to maurer curves; the mod value is used instead.
 #
 # Valid keywords specific to the rose curve type are:
 #     amplitude (required)
