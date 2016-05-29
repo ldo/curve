@@ -693,8 +693,8 @@ class LissaCurve(Curve) :
     def curve_func(self, t) :
         return \
             (
-                math.sin((t + self.x_phase) * 2 * math.pi * self.x_freq) * self.x_amp,
-                math.sin((t + self.y_phase) * 2 * math.pi * self.y_freq) * self.y_amp,
+                math.sin((t + self.x_phase) * qah.circle * self.x_freq) * self.x_amp,
+                math.sin((t + self.y_phase) * qah.circle * self.y_freq) * self.y_amp,
             )
     #end curve_func
 
@@ -743,8 +743,8 @@ class MaurerCurve(Curve) :
     def curve_func(self, t) :
         subcurve = math.floor(t * self.k)
         step = round((t * self.delta - subcurve) * self.mod) % self.mod
-        phi = 2 * math.pi * (step + subcurve) / self.mod
-        theta = 2 * math.pi * ((step + subcurve) * self.freq / self.mod + self.phase)
+        phi = qah.circle * (step + subcurve) / self.mod
+        theta = qah.circle * ((step + subcurve) * self.freq / self.mod + self.phase)
         r = self.offset + math.sin(theta) * self.amplitude
         return \
             (r * math.cos(phi), r * math.sin(phi))
@@ -773,8 +773,8 @@ class RoseCurve(Curve) :
         # Note that the curve can still be traced twice in some situations, namely where
         # the frequency numerator and denominator are both odd, and the offset is zero.
         # But if the offset is set to nonzero, the two halves no longer overlap.
-        phi = 2 * math.pi * t * self.freq.denominator
-        theta = 2 * math.pi * (t + self.phase) * self.freq.numerator
+        phi = qah.circle * t * self.freq.denominator
+        theta = qah.circle * (t + self.phase) * self.freq.numerator
         r = self.offset + math.sin(theta) * self.amplitude
         return \
             (r * math.cos(phi), r * math.sin(phi))
