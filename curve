@@ -615,6 +615,9 @@ def draw_curve(d, c, nr_steps) :
         t = i / nr_steps
         subcurve = subcurve_func(t)
         if subcurve != last_subcurve :
+            if c.closed and last_subcurve != None :
+                d.close()
+            #end if
             d.penup()
             last_subcurve = subcurve
         #end if
@@ -731,14 +734,10 @@ class MaurerCurve(Curve) :
             self.mod
     #end nr_steps
 
-    if False :
-
-        def subcurve_func(self, t) :
-            return \
-                math.floor(t * self.k)
-        #end subcurve_func
-
-    #end if
+    def subcurve_func(self, t) :
+        return \
+            math.floor(t * self.k)
+    #end subcurve_func
 
     def curve_func(self, t) :
         subcurve = math.floor(t * self.k)
