@@ -619,7 +619,7 @@ def draw_curve(d, c, nr_steps) :
         subcurve_func = lambda t : 0
     #end if
     last_subcurve = None
-    for i in range(0, nr_steps) :
+    for i in range(nr_steps) :
         t = i / nr_steps
         subcurve = subcurve_func(t)
         if subcurve != last_subcurve :
