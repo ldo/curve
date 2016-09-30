@@ -828,12 +828,76 @@ class TrochCurve(Curve) :
 
 #end TrochCurve
 
+class WhirlCurve(Curve) :
+    "draws a whirl. For background, see <http://mathworld.wolfram.com/Whirl.html>."
+
+    closed = True
+    params = \
+        {
+            "nr_polys" : int, # how many polygons to draw
+            "nr_sides" : int, # how many sides per polygon,
+            "phase" : float, # phase angle for rotating entire curve
+            "poly_factor" : float, # scale factor for each successive step
+            "radius" : float,
+        }
+
+    def __init__(self) :
+        self.phase = 0
+    #end __init__
+
+    @property
+    def nr_steps(self) :
+        return \
+            self.nr_polys * self.nr_sides
+    #end nr_steps
+
+    def subcurve_func(self, t) :
+        return \
+            math.floor(t * self.nr_polys)
+    #end subcurve_func
+
+    def curve_func(self, t) :
+        subcurve_idx = math.floor(t * self.nr_polys)
+        side_idx = round((t - subcurve_idx / self.nr_polys) * self.nr_polys * self.nr_sides)
+        # distance from centre of polygons to centre of one side of outermost polygon =
+        #    self.radius * math.sin(corner_angle / 2)
+        # therefore, distance from centre of polygons to corner of next-inner polygon =
+        #    self.radius * self.poly_factor
+        # such that
+        # self.poly_factor = math.sin(corner_angle / 2) / math.cos(math.pi / self.nr_sides - step_rotate)
+        scale = self.poly_factor ** subcurve_idx
+        corner_angle = (0.5 - 1 / self.nr_sides) * qah.circle
+        step_rotate_cos = math.sin(corner_angle / 2) / self.poly_factor
+        if step_rotate_cos > 1.0 :
+            raise ValueError \
+              (
+                    "poly_factor %.3g cannot be less than %.3g for %d-sided polygon"
+                %
+                    (self.poly_factor, math.sin(corner_angle / 2), self.nr_sides)
+              )
+        #end if
+        step_rotate = math.pi / self.nr_sides - math.acos(step_rotate_cos)
+        rotate = \
+            (
+                self.phase
+            +
+                step_rotate * subcurve_idx
+            +
+                qah.circle / self.nr_sides * side_idx
+            )
+        return \
+            Vector(self.radius * scale, 0).rotate(rotate)
+    #end curve_func
+
+#end WhirlCurve
+
 curvetypes = \
     {
         "lissa" : LissaCurve,
         "maurer" : MaurerCurve,
         "rose" : RoseCurve,
         "troch" : TrochCurve,
+        "whirl" : WhirlCurve,
     }
 
 #+
