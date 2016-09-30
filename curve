@@ -160,14 +160,14 @@
 #
 # draws a rose curve and saves the image into the file try.png.
 #
-#     curve --draw=postscript:out=try.ps --bgcolor=lavender \
-#         troch:ring=17:wheel=-6:scale=10:frac=3:nrsteps=500:pensize=12:pencolor=orange
+#     curve --draw=postscript:out=try.ps --bgcolour=lavender \
+#         troch:ring=17:wheel=-6:scale=10:frac=3:nrsteps=500:pensize=12:pencolour=orange
 #
 # generates PostScript code for filling the background with a lavender colour, and drawing
 # a trochoid curve on top of it, into the file try.ps.
 #
-#     curve --draw=turtle --bgcolor=hsv,0.67,.08,.98 \
-#         troch:ring=17:wheel=-6:scale=10:frac=3:nrsteps=500:pensize=12:pencolor=hsv,.11,1,1
+#     curve --draw=turtle --bgcolour=hsv,0.67,.08,.98 \
+#         troch:ring=17:wheel=-6:scale=10:frac=3:nrsteps=500:pensize=12:pencolour=hsv,.11,1,1
 #
 # does the same trochoid curve as the previous example, specifying the colours in HSV
 # form.
@@ -208,9 +208,9 @@ def parse_ratio(ratiostr) :
         Fraction(numer, denom)
 #end parse_ratio
 
-def parse_color_opt(colorstr) :
-    if colorstr.find(",") >= 0 :
-        items = colorstr.split(",")
+def parse_colour_opt(colourstr) :
+    if colourstr.find(",") >= 0 :
+        items = colourstr.split(",")
         if len(items) == 4 :
             space = items[0].lower()
             items = items[1:]
@@ -219,39 +219,39 @@ def parse_color_opt(colorstr) :
         else :
             raise ValueError("colour spec must be [space,]comp1,comp2,comp3")
         #end if
-        pen_color = \
+        pen_colour = \
             (
                 {
                     "hsv" : colorsys.hsv_to_rgb,
                     "rgb" : lambda r, g, b : (r, g, b),
                 }[space](*tuple(float(i) for i in items))
             )
-    elif colorstr.startswith("#") :
-        assert (len(colorstr) - 1) % 3 == 0, "invalid HTML colour spec"
-        seglen = (len(colorstr) - 1) // 3
-        pen_color = tuple \
+    elif colourstr.startswith("#") :
+        assert (len(colourstr) - 1) % 3 == 0, "invalid HTML colour spec"
+        seglen = (len(colourstr) - 1) // 3
+        pen_colour = tuple \
           (
-            int(colorstr[i * seglen + 1 : (i + 1) * seglen + 1], 16) / ((1 << seglen * 4) - 1)
+            int(colourstr[i * seglen + 1 : (i + 1) * seglen + 1], 16) / ((1 << seglen * 4) - 1)
             for i in (0, 1, 2)
           )
     else :
-        pen_color = colorstr # assume it’s a colour name
+        pen_colour = colourstr # assume it’s a colour name
     #end if
-    return pen_color
-#end parse_color_opt
+    return pen_colour
+#end parse_colour_opt
 
-def parse_color_args(args) :
+def parse_colour_args(args) :
     if len(args) == 1 and type(args[0]) == str :
-        newcolor = tuple(Colour.x11[args[0]])[:3]
+        newcolour = tuple(Colour.x11[args[0]])[:3]
     elif len(args) == 1 and type(args[0]) == tuple and len(args[0]) == 3 :
-        newcolor = args[0]
+        newcolour = args[0]
     elif len(args) == 3 :
-        newcolor = args
+        newcolour = args
     else :
         raise TypeError("invalid colour specification")
     #end if
-    return newcolor
-#end parse_color_args
+    return newcolour
+#end parse_colour_args
 
 #+
 # Drawing classes
@@ -268,18 +268,18 @@ class Drawer :
 # setsize(w, h)
 #     sets the dimensions of the drawing area.
 #
-# bgcolor(c)
-#     clears the background to the specified colour. See pencolor, below, for valid
+# bgcolour(c)
+#     clears the background to the specified colour. See pencolour, below, for valid
 #     values for c.
 #
 # donesetup()
 #     will be called exactly once. Indicates that no further calls to setsize or
-#     bgcolor will be done.
+#     bgcolour will be done.
 #
 # pensize(w)
 #     sets the pensize for subsequent drawing to w.
 #
-# pencolor(c)
+# pencolour(c)
 #     sets the pen colour for subsequent to c, which can be an X11 colour name, or a tuple
 #     of 3 values (r, g, b) in [0 .. 1], or 3 separate args r, g, b in [0 .. 1].
 #
@@ -310,8 +310,8 @@ class CairoDrawer(Drawer) :
 
     def __init__(self) :
         self.size = None
-        self.bg_color = Colour.grey(1)
-        self.pen_color = Colour.grey(0)
+        self.bg_colour = Colour.grey(1)
+        self.pen_colour = Colour.grey(0)
         self.pen_size = 1
         self.scale_factor = 1.0
         self.outfilename = None
@@ -329,9 +329,9 @@ class CairoDrawer(Drawer) :
         self.size = Vector.from_tuple(newsize)
     #end setsize
 
-    def bgcolor(self, *args) :
-        self.bg_color = Colour.from_rgba(parse_color_args(args))
-    #end bgcolor
+    def bgcolour(self, *args) :
+        self.bg_colour = Colour.from_rgba(parse_colour_args(args))
+    #end bgcolour
 
     def donesetup(self) :
         assert self.size != None, "forgot to set drawing size"
@@ -346,7 +346,7 @@ class CairoDrawer(Drawer) :
                 .set_operator(CAIRO.OPERATOR_SOURCE)
                 .translate(self.size / 2)
                 .scale((self.scale_factor, self.scale_factor))
-                .set_source_colour(self.bg_color)
+                .set_source_colour(self.bg_colour)
                 .paint()
                 .new_path()
                 .move_to((0, 0))
@@ -359,9 +359,9 @@ class CairoDrawer(Drawer) :
         self.pen_size = newsize
     #end pensize
 
-    def pencolor(self, *args) :
-        self.pen_color = Colour.from_rgba(parse_color_args(args))
-    #end pencolor
+    def pencolour(self, *args) :
+        self.pen_colour = Colour.from_rgba(parse_colour_args(args))
+    #end pencolour
 
     def penup(self) :
         self.finishpath()
@@ -385,7 +385,7 @@ class CairoDrawer(Drawer) :
         if not self.inpath :
             (self.g
                 .new_path()
-                .set_source_colour(Colour.from_rgba(self.pen_color))
+                .set_source_colour(Colour.from_rgba(self.pen_colour))
                 .set_line_width(self.pen_size)
             )
             self.inpath = True
@@ -442,11 +442,11 @@ class PostScriptDrawer(Drawer) :
           )
     #end setsize
 
-    def bgcolor(self, *args) :
+    def bgcolour(self, *args) :
         self.w("currentcolor currentcolorspace\n")
-        self.w("%.3f %.3f %.3f setrgbcolor\n" % parse_color_args(args))
+        self.w("%.3f %.3f %.3f setrgbcolor\n" % parse_colour_args(args))
         self.w("clippath fill\nsetcolorspace setcolor\n")
-    #end bgcolor
+    #end bgcolour
 
     def donesetup(self) :
         self.w \
@@ -463,10 +463,10 @@ class PostScriptDrawer(Drawer) :
         self.w("%.1f setlinewidth\n" % newsize)
     #end pensize
 
-    def pencolor(self, *args) :
+    def pencolour(self, *args) :
         self.finishpath()
-        self.w("%.3f %.3f %.3f setrgbcolor\n" % parse_color_args(args))
-    #end pencolor
+        self.w("%.3f %.3f %.3f setrgbcolor\n" % parse_colour_args(args))
+    #end pencolour
 
     def penup(self) :
         self.finishpath()
@@ -527,11 +527,19 @@ class TurtleDrawer(Drawer) :
         import turtle
         self.t = turtle
         for \
-            method \
+            mymethod, theirmethod \
         in \
-            ("bgcolor", "pensize", "pencolor", "pendown",) \
+            (
+                ("bgcolour", "bgcolor"),
+                ("pensize", None),
+                ("pencolour", "pencolor"),
+                ("pendown", None),
+            ) \
         :
-            setattr(self, method, getattr(self.t, method))
+            if theirmethod == None :
+                theirmethod = mymethod
+            #end if
+            setattr(self, mymethod, getattr(self.t, theirmethod))
         #end for
         self.track_heading = False
         self.first_point = None
@@ -839,12 +847,12 @@ curvetypes = \
     ["bgcolor=", "bgcolour=", "draw=", "nrsteps=", "size="]
   )
 drawtype = None
-bgcolor = None
+bgcolour = None
 drawsize = None
 default_nrsteps = None
 for keyword, value in opts :
     if keyword == "--bgcolor" or keyword == "--bgcolour" :
-        bgcolor = parse_color_opt(value)
+        bgcolour = parse_colour_opt(value)
     elif keyword == "--draw" :
         items = value.split(":")
         if drawtype != None :
@@ -877,14 +885,14 @@ if drawtype == None :
 if drawsize != None :
     d.setsize(drawsize)
 #end if
-if bgcolor != None :
-    d.bgcolor(bgcolor)
+if bgcolour != None :
+    d.bgcolour(bgcolour)
 #end if
 d.donesetup()
 curvename = None
 for arg in args :
-    # note pen_color and pen_size default to settings for previous curve, if any
-    pen_color = None
+    # note pen_colour and pen_size default to settings for previous curve, if any
+    pen_colour = None
     pen_size = None
     items = arg.split(":")
     if len(items) == 0 :
@@ -904,7 +912,7 @@ for arg in args :
             assert not hasattr(curve, "nr_steps"), "curve provides its own value for nrsteps"
             nr_steps = int(value)
         elif keyword == "pencolor" or keyword == "pencolour" :
-            pen_color = parse_color_opt(value)
+            pen_colour = parse_colour_opt(value)
         elif keyword == "pensize" :
             pen_size = float(value)
         elif keyword in curve.params :
@@ -929,8 +937,8 @@ for arg in args :
     if nr_steps == None :
         raise getopt.GetoptError("forgot to specify nrsteps")
     #end if
-    if pen_color != None :
-        d.pencolor(pen_color)
+    if pen_colour != None :
+        d.pencolour(pen_colour)
     #end if
     if pen_size != None :
         d.pensize(pen_size)
