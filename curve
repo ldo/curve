@@ -837,7 +837,7 @@ class WhirlCurve(Curve) :
             "nr_polys" : int, # how many polygons to draw
             "nr_sides" : int, # how many sides per polygon,
             "phase" : float, # phase angle for rotating entire curve
-            "poly_factor" : float, # scale factor for each successive step
+            "poly_shrink" : float, # shrink factor for each successive step, [-1, +1]
             "radius" : float,
         }
 
@@ -862,21 +862,15 @@ class WhirlCurve(Curve) :
         # distance from centre of polygons to centre of one side of outermost polygon =
         #    self.radius * math.sin(corner_angle / 2)
         # therefore, distance from centre of polygons to corner of next-inner polygon =
-        #    self.radius * self.poly_factor
+        #    self.radius * step_scale_factor
         # such that
-        # self.poly_factor = math.sin(corner_angle / 2) / math.cos(math.pi / self.nr_sides - step_rotate)
-        scale = self.poly_factor ** subcurve_idx
+        #     step_scale_factor = math.sin(corner_angle / 2) / math.cos(math.pi / self.nr_sides - abs(step_rotate))
+        # where
+        #     step_rotate = math.pi / self.nr_sides * self.poly_shrink
+        step_rotate = math.pi / self.nr_sides * self.poly_shrink
         corner_angle = (0.5 - 1 / self.nr_sides) * qah.circle
-        step_rotate_cos = math.sin(corner_angle / 2) / self.poly_factor
-        if step_rotate_cos > 1.0 :
-            raise ValueError \
-              (
-                    "poly_factor %.3g cannot be less than %.3g for %d-sided polygon"
-                %
-                    (self.poly_factor, math.sin(corner_angle / 2), self.nr_sides)
-              )
-        #end if
-        step_rotate = math.pi / self.nr_sides - math.acos(step_rotate_cos)
+        step_scale_factor = math.sin(corner_angle / 2) / math.cos(math.pi / self.nr_sides - abs(step_rotate))
+        scale = step_scale_factor ** subcurve_idx
         rotate = \
             (
                 self.phase
