@@ -849,7 +849,9 @@ class TrochCurve(Curve) :
 #end TrochCurve
 
 class WhirlCurve(Curve) :
-    "draws a whirl. For background, see <http://mathworld.wolfram.com/Whirl.html>."
+    "draws a whirl. For background, see <http://mathworld.wolfram.com/Whirl.html>." \
+    " Also, nested polygons <http://mathworld.wolfram.com/NestedPolygon.html> are" \
+    " a variation on this."
 
     closed = True
     params = \
