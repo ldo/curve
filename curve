@@ -173,6 +173,12 @@
 # does the same trochoid curve as the previous example, specifying the colours in HSV
 # form.
 #
+# Further example curvespecs:
+#
+#     maurer:amplitude=200:freq=5:delta=97:mod=360
+#
+# recreates figure 2 from the Maurer paper.
+#
 # Copyright 2014, 2016 by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>.
 # Licensed under CC-BY-SA <http://creativecommons.org/licenses/by-sa/4.0/>.
 #-
@@ -721,9 +727,13 @@ class MaurerCurve(Curve) :
     params = \
         {
             "amplitude" : float, # amplitude of sine wave
-            "delta" : int, # the number of steps between successive curve points
-            "mod" : int, # modulus (total number of steps around curve)
-            "freq" : int,
+            "delta" : int,
+              # the number of steps between successive curve points
+              # (the “d” parameter from the Maurer paper)
+            "mod" : int,
+              # modulus (total number of steps around curve)
+              # (the “z” parameter from the Maurer paper)
+            "freq" : int, # the “n” parameter from the Maurer paper
             "offset" : float, # offset of curve, defaults to 0
             "phase" : float, # phase angle for rotating curve
         }
