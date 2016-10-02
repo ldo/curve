@@ -627,8 +627,12 @@ def draw_curve(d, c, nr_steps) :
     #end if
     last_subcurve = None
     for i in range(nr_steps) :
-        t = i / nr_steps
-        subcurve = subcurve_func(t)
+        if hasattr(c, "nr_steps") :
+            subcurve = subcurve_func(i)
+        else :
+            t = i / nr_steps
+            subcurve = subcurve_func(t)
+        #end if
         if subcurve != last_subcurve :
             if c.closed and last_subcurve != None :
                 d.close()
@@ -636,7 +640,11 @@ def draw_curve(d, c, nr_steps) :
             d.penup()
             last_subcurve = subcurve
         #end if
-        d.setpos(c.curve_func(t))
+        if hasattr(c, "nr_steps") :
+            d.setpos(c.curve_func(i))
+        else :
+            d.setpos(c.curve_func(t))
+        #end if
         d.pendown() # for subsequent points
     #end for
     if c.closed :
@@ -671,13 +679,14 @@ class Curve :
 #     first call to curve_func.
 #
 # curve_func(t)
-#     maps a parameter value t ∈ [0, 1) onto a corresponding (x, y) coordinate tuple
-#     for defining the curve.
+#     maps a parameter value t onto a corresponding (x, y) coordinate tuple
+#     for defining the curve. If nr_steps is present, t is an integer ∈ [0, nr_steps),
+#     otherwise it is a real ∈ [0, 1).
 #
 # subcurve_func(t)
 #     optional, returns an integer which, when it changes from the previous value,
 #     indicates that a new subcurve is starting which should not be joined to the
-#     previous one.
+#     previous one. t has the same meaning as for curve_func.
 #-
 
     pass
@@ -744,7 +753,7 @@ class MaurerCurve(Curve) :
     #end __init__
 
     def setup(self) :
-        self.k = gcd(self.delta, self.mod)
+        self.k = gcd(self.delta, self.mod) # number of points per subcurve
     #end setup
 
     @property
@@ -753,14 +762,14 @@ class MaurerCurve(Curve) :
             self.mod
     #end nr_steps
 
-    def subcurve_func(self, t) :
+    def subcurve_func(self, n) :
         return \
-            math.floor(t * self.k)
+            n // self.mod // self.k
     #end subcurve_func
 
-    def curve_func(self, t) :
-        subcurve = math.floor(t * self.k)
-        step = round((t * self.delta - subcurve) * self.mod) % self.mod
+    def curve_func(self, n) :
+        subcurve = n // self.mod // self.k
+        step = n * self.delta % self.mod
         phi = qah.circle * (step + subcurve) / self.mod
         theta = qah.circle * ((step + subcurve) * self.freq / self.mod + self.phase)
         r = self.offset + math.sin(theta) * self.amplitude
@@ -862,14 +871,14 @@ class WhirlCurve(Curve) :
             self.nr_polys * self.nr_sides
     #end nr_steps
 
-    def subcurve_func(self, t) :
+    def subcurve_func(self, step) :
         return \
-            math.floor(t * self.nr_polys)
+            step // self.nr_sides
     #end subcurve_func
 
-    def curve_func(self, t) :
-        subcurve_idx = math.floor(t * self.nr_polys)
-        side_idx = round((t - subcurve_idx / self.nr_polys) * self.nr_polys * self.nr_sides)
+    def curve_func(self, step) :
+        subcurve_idx = step // self.nr_sides
+        side_idx = step % self.nr_sides
         # distance from centre of polygons to centre of one side of outermost polygon =
         #    self.radius * math.sin(corner_angle / 2)
         # therefore, distance from centre of polygons to corner of next-inner polygon =
