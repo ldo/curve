@@ -76,6 +76,7 @@
 #     maurer -- Maurer rose
 #     rose -- rose curve
 #     troch -- trochoid curve
+#     whirl -- nested polygons
 #
 # Valid keywords specific to the lissa curve type are:
 #     x_amp (required)
