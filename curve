@@ -576,6 +576,7 @@ class TurtleDrawer(Drawer) :
         self.track_heading = False
         self.first_point = None
         self.default_delay = self.t.delay()
+        self.t.title("curve")
     #end __init__
 
     def opt_speed(self, newspeed) :
