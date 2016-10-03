@@ -200,6 +200,31 @@ import getopt
 # Useful stuff
 #-
 
+def make_parse_int_range(lo, hi = None) :
+
+    def parse_int_atleast(s) :
+        val = int(s)
+        if val < lo :
+            raise ValueError("value must be at least %d, not %d" % (lo, val))
+        #end if
+        return \
+            val
+    #end parse_int_atleast
+
+    def parse_int_range(s) :
+        val = int(s)
+        if val < lo or val > hi :
+            raise ValueError("value must be in [%d .. %d], not %d" % (lo, hi, val))
+        #end if
+        return \
+            val
+    #end parse_int_range
+
+#begin make_parse_int_range
+    return \
+        (parse_int_atleast, parse_int_range)[hi != None]
+#end make_parse_int_range
+
 def parse_ratio(ratiostr) :
     "parses ratiostr as a single integer, or as two integers separated by a" \
     " slash: a/b representing a ratio. returns a Fraction object representing" \
@@ -699,10 +724,10 @@ class LissaCurve(Curve) :
     params = \
         {
             "x_amp" : float, # amplitude of curve along x-axis
-            "x_freq" : int, # frequency of curve along x-axis
+            "x_freq" : make_parse_int_range(1), # frequency of curve along x-axis
             "x_phase" : float, # phase of curve along x-axis
             "y_amp" : float, # amplitude of curve along y-axis
-            "y_freq" : int, # frequency of curve along y-axis
+            "y_freq" : make_parse_int_range(1), # frequency of curve along y-axis
             "y_phase" : float, # phase of curve along y-axis
         }
 
@@ -736,13 +761,13 @@ class MaurerCurve(Curve) :
     params = \
         {
             "amplitude" : float, # amplitude of sine wave
-            "delta" : int,
+            "delta" : make_parse_int_range(1),
               # the number of steps between successive curve points
               # (the “d” parameter from the Maurer paper)
-            "mod" : int,
+            "mod" : make_parse_int_range(1),
               # modulus (total number of steps around curve)
               # (the “z” parameter from the Maurer paper)
-            "freq" : int, # the “n” parameter from the Maurer paper
+            "freq" : make_parse_int_range(1), # the “n” parameter from the Maurer paper
             "offset" : float, # offset of curve, defaults to 0
             "phase" : float, # phase angle for rotating curve
         }
@@ -856,8 +881,8 @@ class WhirlCurve(Curve) :
     closed = True
     params = \
         {
-            "nr_polys" : int, # how many polygons to draw
-            "nr_sides" : int, # how many sides per polygon,
+            "nr_polys" : make_parse_int_range(1), # how many polygons to draw
+            "nr_sides" : make_parse_int_range(3), # how many sides per polygon,
             "phase" : float, # phase angle for rotating entire curve
             "poly_shrink" : float, # shrink factor for each successive step, [-1, +1]
             "radius" : float,
@@ -996,7 +1021,16 @@ for arg in args :
         elif keyword == "pensize" :
             pen_size = float(value)
         elif keyword in curve.params :
-            setattr(curve, keyword, curve.params[keyword](value))
+            fail = None
+            try :
+                val = curve.params[keyword](value)
+            except ValueError as exc :
+                fail = ValueError("bad value for %s parameter: %s" % (keyword, str(exc)))
+            #end try
+            if fail != None :
+                raise fail
+            #end if
+            setattr(curve, keyword, val)
         else :
             raise getopt.GetoptError("no such curve param %s" % keyword)
         #end if
