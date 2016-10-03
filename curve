@@ -701,7 +701,7 @@ class Curve :
 #
 # setup()
 #     optional, if present, will be called after setting of all options and before
-#     first call to curve_func.
+#     accessing nr_steps and first call to curve_func.
 #
 # curve_func(t)
 #     maps a parameter value t onto a corresponding (x, y) coordinate tuple
@@ -1045,6 +1045,9 @@ for arg in args :
             "missing parameters for %s curve: %s" % (curvename, ", ".join(tuple(missing)))
           )
     #end if
+    if hasattr(curve, "setup") :
+        curve.setup()
+    #end if
     if hasattr(curve, "nr_steps") :
         nr_steps = curve.nr_steps
     #end if
@@ -1056,9 +1059,6 @@ for arg in args :
     #end if
     if pen_size != None :
         d.pensize(pen_size)
-    #end if
-    if hasattr(curve, "setup") :
-        curve.setup()
     #end if
     draw_curve(d, curve, nr_steps)
 #end for
