@@ -631,6 +631,7 @@ class TurtleDrawer(Drawer) :
 
     def done(self) :
         self.t.hideturtle()
+        self.t.title("curve -- click to close")
         self.t.exitonclick()
     #end done
 
