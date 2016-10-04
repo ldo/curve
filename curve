@@ -1104,8 +1104,28 @@ if len(args) >= 1 and args[0] == "help" :
             #end if
         #end for
     else :
-        sys.stdout.write("valid curve types are %s\n" % ", ".join(sorted(curvetypes)))
+        sys.stdout.write \
+          (
+                "Valid curve types are %s. Type\n"
+                "\n"
+                "    %s help «curvetype»\n"
+                "\n"
+                "for help on «curvetype».\n"
+            %
+                (", ".join(sorted(curvetypes)), sys.argv[0])
+          )
     #end if
+elif len(args) == 0 :
+    sys.stdout.write \
+      (
+            "Try\n"
+            "\n"
+            "    %s help\n"
+            "\n"
+            "for help.\n"
+        %
+            sys.argv[0]
+      )
 else :
     if drawtype == None :
         raise getopt.GetoptError("missing --draw opt")
