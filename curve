@@ -836,6 +836,95 @@ class RoseCurve(Curve) :
 
 #end RoseCurve
 
+class SpirolateralCurve(Curve) :
+    "draws a spirolateral curve. For background, see" \
+    " <http://www.mi.sanu.ac.rs/vismath/krawczyk/spdesc00.htm>."
+
+    closed = True
+    params = \
+        {
+            "n" : make_parse_int_range(1), # lengths of lines are 1 * step ..  n * step
+            "phase" : float, # phase angle for rotating curve
+            # TBD "reversed"
+            "start" : parse_ratio,
+            "step" : float, # lengths of lines are integer multiples of this
+            "turn" : parse_ratio,
+              # turn angle as a rational fraction of a circle
+              # Note this angle is 180° minus the angle as described in
+              # the MathWorld article.
+        }
+
+    def __init__(self) :
+        self.phase = 0
+        self.reversed = set()
+        self.start = 0
+    #end __init__
+
+    def setup(self) :
+        start_point = Vector(0, 0)
+        seg_points = []
+        point = start_point
+        dirn = self.start
+        for i in range(1, self.n + 1) :
+            seg_points.append(point)
+            sys.stderr.write("%s step by %s[%d] in dirn %s => %s\n" % (point, Vector(i * self.step, 0).rotate(float(dirn) * qah.circle), i, dirn, point + Vector(i * self.step, 0).rotate(float(dirn) * qah.circle))) # debug
+            point += Vector(i * self.step, 0).rotate(float(dirn) * qah.circle)
+            dirn += self.turn * (1, -1)[i in self.reversed]
+        #end for
+        end_point = point
+        point_delta = end_point - start_point
+        seg_rotate = dirn - self.start
+        # at this point, seg_rotate is the fraction of a circle turned through by one curve segment.
+        self.radius = abs(point_delta) / 2 / math.sin(float(seg_rotate) * qah.circle)
+        #origin = point_delta.rotate(90 * qah.deg).norm() * self.radius * math.cos(float(seg_rotate) * qah.circle)
+        point = start_point
+        origin = Vector(0, 0)
+        dirn = Fraction(0, 1)
+        sys.stderr.write("origin: average of") # debug
+        for i in range(seg_rotate.denominator) :
+            sys.stderr.write(" %s" % point) # debug
+            origin += point
+            point += point_delta.rotate(float(dirn) * qah.circle)
+            sys.stderr.write("(next delta %s)" % point_delta.rotate(float(dirn) * qah.circle)) # debug
+            dirn += seg_rotate
+            sys.stderr.write("(next dirn %s)" % dirn) # debug
+        #end for
+        origin /= seg_rotate.denominator
+        sys.stderr.write(" excl %s = %s\n" % (point, origin)) # debug
+        self.seg_points = list(point - origin for point in seg_points)
+        self.seg_rotate = seg_rotate
+        sys.stderr.write \
+          (
+                "spirolat setup points = %s, end_point = %s, radius = %.3g, seg_rotate = %d○\n"
+            %
+                (repr(self.seg_points), end_point, self.radius, self.seg_rotate)
+          ) # debug
+    #end setup
+
+    @property
+    def nr_steps(self) :
+        return \
+            self.seg_rotate.denominator * self.n
+    #end nr_steps
+
+    def curve_func(self, step) :
+        sys.stderr.write \
+          (
+                "spirolat point %d/%d = seg_point[%d] = %s.rotate(%.3g○) => %s\n"
+            %
+                (step, self.nr_steps, step % self.n, self.seg_points[step % self.n], float(self.seg_rotate) * (step // self.n), self.seg_points[step % self.n].rotate(float(self.seg_rotate) * (step // self.n) * qah.circle))
+          ) # debug
+        return \
+            self.seg_points[step % self.n].rotate \
+              (
+                    float(self.seg_rotate) * (step // self.n) * qah.circle
+                +
+                    self.phase
+              )
+    #end curve_func
+
+#end SpirolateralCurve
+
 class TrochCurve(Curve) :
     "draws a hypotrochoid or epitrochoid curve. For background, see" \
     " <https://en.wikipedia.org/wiki/Spirograph>, <https://en.wikipedia.org/wiki/Epitrochoid>" \
@@ -939,6 +1028,7 @@ curvetypes = \
         "lissa" : LissaCurve,
         "maurer" : MaurerCurve,
         "rose" : RoseCurve,
+        "spirolat" : SpirolateralCurve,
         "troch" : TrochCurve,
         "whirl" : WhirlCurve,
     }
