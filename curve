@@ -867,7 +867,6 @@ class SpirolateralCurve(Curve) :
         dirn = self.start
         for i in range(1, self.n + 1) :
             seg_points.append(point)
-            sys.stderr.write("%s step by %s[%d] in dirn %s => %s\n" % (point, Vector(i * self.step, 0).rotate(float(dirn) * qah.circle), i, dirn, point + Vector(i * self.step, 0).rotate(float(dirn) * qah.circle))) # debug
             point += Vector(i * self.step, 0).rotate(float(dirn) * qah.circle)
             dirn += self.turn * (1, -1)[i in self.reversed]
         #end for
@@ -880,25 +879,14 @@ class SpirolateralCurve(Curve) :
         point = start_point
         origin = Vector(0, 0)
         dirn = Fraction(0, 1)
-        sys.stderr.write("origin: average of") # debug
         for i in range(seg_rotate.denominator) :
-            sys.stderr.write(" %s" % point) # debug
             origin += point
             point += point_delta.rotate(float(dirn) * qah.circle)
-            sys.stderr.write("(next delta %s)" % point_delta.rotate(float(dirn) * qah.circle)) # debug
             dirn += seg_rotate
-            sys.stderr.write("(next dirn %s)" % dirn) # debug
         #end for
         origin /= seg_rotate.denominator
-        sys.stderr.write(" excl %s = %s\n" % (point, origin)) # debug
         self.seg_points = list(point - origin for point in seg_points)
         self.seg_rotate = seg_rotate
-        sys.stderr.write \
-          (
-                "spirolat setup points = %s, end_point = %s, radius = %.3g, seg_rotate = %d○\n"
-            %
-                (repr(self.seg_points), end_point, self.radius, self.seg_rotate)
-          ) # debug
     #end setup
 
     @property
@@ -908,12 +896,6 @@ class SpirolateralCurve(Curve) :
     #end nr_steps
 
     def curve_func(self, step) :
-        sys.stderr.write \
-          (
-                "spirolat point %d/%d = seg_point[%d] = %s.rotate(%.3g○) => %s\n"
-            %
-                (step, self.nr_steps, step % self.n, self.seg_points[step % self.n], float(self.seg_rotate) * (step // self.n), self.seg_points[step % self.n].rotate(float(self.seg_rotate) * (step // self.n) * qah.circle))
-          ) # debug
         return \
             self.seg_points[step % self.n].rotate \
               (
