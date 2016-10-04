@@ -241,6 +241,21 @@ def parse_ratio(ratiostr) :
         Fraction(numer, denom)
 #end parse_ratio
 
+def parse_natural_set(sstr) :
+    "parses sstr as a comma-separated list of positive integers, and" \
+    " returns the set of values found."
+    result = set()
+    for item in sstr.split(",") :
+        item = int(item)
+        if item <= 0 :
+            raise ValueError("naturals must be positive: %d" % item)
+        #end if
+        result.add(item)
+    #end for
+    return \
+        result
+#end parse_natural_set
+
 def parse_colour_opt(colourstr) :
     if colourstr.find(",") >= 0 :
         items = colourstr.split(",")
@@ -846,7 +861,7 @@ class SpirolateralCurve(Curve) :
         {
             "n" : make_parse_int_range(1), # lengths of lines are 1 * step ..  n * step
             "phase" : float, # phase angle for rotating curve
-            # TBD "reversed"
+            "reversed" : parse_natural_set, # steps for which to reverse direction
             "start" : parse_ratio,
             "step" : float, # lengths of lines are integer multiples of this
             "turn" : parse_ratio,
