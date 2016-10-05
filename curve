@@ -896,7 +896,6 @@ class SpirolateralCurve(Curve) :
         point_delta = end_point - start_point
         seg_rotate = dirn - self.start
         # at this point, seg_rotate is the fraction of a circle turned through by one curve segment.
-        self.radius = abs(point_delta) / 2 / math.sin(float(seg_rotate) * qah.circle)
         point = start_point
         origin = Vector(0, 0)
         dirn = Fraction(0, 1)
