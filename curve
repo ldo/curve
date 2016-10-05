@@ -864,7 +864,7 @@ class SpirolateralCurve(Curve) :
     "draws a spirolateral curve. For background, see" \
     " <http://www.mi.sanu.ac.rs/vismath/krawczyk/spdesc00.htm>."
 
-    closed = True
+    # closed attribute depends on curve
     params = \
         (
             ("n", make_parse_int_range(1), "lengths of lines are 1 * step ..  n * step"),
@@ -883,6 +883,7 @@ class SpirolateralCurve(Curve) :
         self.phase = 0
         self.reversed = set()
         self.start = 0
+        self.closed = True # to begin with
     #end __init__
 
     def setup(self) :
@@ -901,7 +902,6 @@ class SpirolateralCurve(Curve) :
         seg_rotate = dirn - self.start
         # at this point, seg_rotate is the fraction of a circle turned through by one curve segment.
         self.radius = abs(point_delta) / 2 / math.sin(float(seg_rotate) * qah.circle)
-        #origin = point_delta.rotate(90 * qah.deg).norm() * self.radius * math.cos(float(seg_rotate) * qah.circle)
         point = start_point
         origin = Vector(0, 0)
         dirn = Fraction(0, 1)
@@ -910,6 +910,11 @@ class SpirolateralCurve(Curve) :
             point += point_delta.rotate(float(dirn) * qah.circle)
             dirn += seg_rotate
         #end for
+        sys.stderr.write("full period, start_point = %s, end_point = %s\n" % (start_point, point)) # debug
+        self.closed = abs(start_point - point) < 1e-7
+        if not self.closed :
+            seg_points.append(point)
+        #end if
         origin /= seg_rotate.denominator
         self.seg_points = list(point - origin for point in seg_points)
         self.seg_rotate = seg_rotate
@@ -918,14 +923,14 @@ class SpirolateralCurve(Curve) :
     @property
     def nr_steps(self) :
         return \
-            self.seg_rotate.denominator * self.n
+            self.seg_rotate.denominator * len(self.seg_points)
     #end nr_steps
 
     def curve_func(self, step) :
         return \
-            self.seg_points[step % self.n].rotate \
+            self.seg_points[step % len(self.seg_points)].rotate \
               (
-                    float(self.seg_rotate) * (step // self.n) * qah.circle
+                    float(self.seg_rotate) * (step // len(self.seg_points)) * qah.circle
                 +
                     self.phase
               )
