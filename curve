@@ -910,7 +910,6 @@ class SpirolateralCurve(Curve) :
             point += point_delta.rotate(float(dirn) * qah.circle)
             dirn += seg_rotate
         #end for
-        sys.stderr.write("full period, start_point = %s, end_point = %s\n" % (start_point, point)) # debug
         self.closed = abs(start_point - point) < 1e-7
         if not self.closed :
             seg_points.append(point)
