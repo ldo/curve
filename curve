@@ -872,11 +872,7 @@ class SpirolateralCurve(Curve) :
             ("reversed", parse_natural_set, "steps for which to reverse direction"),
             ("start", parse_ratio, "starting angle in rational fractions of a circle"),
             ("step", float, "lengths of lines are integer multiples of this"),
-            ("turn", parse_ratio,
-                "turn angle as a rational fraction of a circle."
-                " Note this angle is 180° minus the angle as described in"
-                " the abovementioned article."
-            ),
+            ("angle", parse_ratio, "angle between segments as a rational fraction of a circle."),
         )
 
     def __init__(self) :
@@ -894,7 +890,7 @@ class SpirolateralCurve(Curve) :
         for i in range(1, self.n + 1) :
             seg_points.append(point)
             point += Vector(i * self.step, 0).rotate(float(dirn) * qah.circle)
-            dirn += self.turn * (1, -1)[i in self.reversed]
+            dirn += (Fraction(1, 2) - self.angle) * (1, -1)[i in self.reversed]
               # FIXME: reversed doesn’t quite behave as per the reference
         #end for
         end_point = point
