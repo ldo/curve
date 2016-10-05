@@ -891,7 +891,6 @@ class SpirolateralCurve(Curve) :
             seg_points.append(point)
             point += Vector(i * self.step, 0).rotate(float(dirn) * qah.circle)
             dirn += (Fraction(1, 2) - self.angle) * (1, -1)[i in self.reversed]
-              # FIXME: reversed doesn’t quite behave as per the reference
         #end for
         end_point = point
         point_delta = end_point - start_point
