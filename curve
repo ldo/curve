@@ -17,8 +17,9 @@
 #        and the drawoptions are drawtype-specific.
 #
 #        For the cairo drawtype, the drawoptions are:
-#            out=filename (required)
+#            out=filename
 #                specifies a filename to write the PNG image data to.
+#                If not specified, the image is displayed on-screen.
 #            scale=f
 #                an overall scale factor to apply to the drawing.
 #
@@ -180,6 +181,8 @@
 #
 # recreates figure 2 from the Maurer paper.
 #
+# External program needed: ImageMagick for on-screen display of Cairo-generated PNG images.
+#
 # Copyright 2014, 2016 by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>.
 # Licensed under CC-BY-SA <http://creativecommons.org/licenses/by-sa/4.0/>.
 #-
@@ -189,6 +192,7 @@ import math
 from fractions import \
     Fraction, \
     gcd
+import subprocess
 import colorsys
 import qahirah as qah
 from qahirah import \
@@ -384,7 +388,6 @@ class CairoDrawer(Drawer) :
 
     def donesetup(self) :
         assert self.size != None, "forgot to set drawing size"
-        assert self.outfilename != None, "forgot to set output filename"
         self.pix = qah.ImageSurface.create \
           (
             format = CAIRO.FORMAT_RGB24,
@@ -452,7 +455,18 @@ class CairoDrawer(Drawer) :
         self.finishpath()
         self.pix.flush()
         self.g = None
-        self.pix.write_to_png(self.outfilename)
+        if self.outfilename != None :
+            self.pix.write_to_png(self.outfilename)
+        else :
+            proc_display = subprocess.Popen \
+              (
+                args = ("display",),
+                stdin = subprocess.PIPE
+              )
+            self.pix.write_to_png_file(proc_display.stdin)
+            proc_display.stdin.close()
+            proc_display.wait()
+        #end if
         self.pix = None
     #end done
 
