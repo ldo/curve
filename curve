@@ -123,6 +123,25 @@
 #     phase
 #        a phase angle for rotating the curve. Defaults to 0.
 #
+# Valid keywords specific to the spirolat curve type are:
+#     angle (required)
+#         the angle between segments, expressed as a ratio of two integers that define the
+#         rational fraction of the circle.
+#     n (required)
+#        the maximum integer multiplier factor for the lengths of lines. Line lengths
+#        go from 1 * n to n * step.
+#     phase
+#         optional rotation angle in degrees for this pattern. If omitted,
+#         defaults to 0.
+#     reversed
+#         a comma-separated list of one or more length multiplier factors for
+#         which to reverse the direction. If omitted, no reversals happen.
+#     start
+#         the starting angle, expressed as a ratio of two integers that define the
+#         rational fraction of the circle. If omitted, defaults to zero.
+#     step (required)
+#         lengths of lines are integer multiples of this.
+#
 # Valid keywords specific to the troch curve type are:
 #     ring (required)
 #         specifies the relative radius of the stationary circle. Must be an
@@ -140,6 +159,22 @@
 #     phase
 #         optional starting phase angle in degrees for this pattern. If omitted,
 #         defaults to 0.
+#
+# Valid keywords specific to the whirl curve type are:
+#     nr_polys (required)
+#         the number of nested polygons to draw.
+#     nr_sides (required)
+#         the number of sides each polygon is to have.
+#     phase
+#         optional rotation angle in degrees for this pattern. If omitted,
+#         defaults to 0.
+#     poly_shrink
+#         the relative shrink amount for each successive polygon, in [-1, +1].
+#         Positive values cause each successive polygon to be rotated anticlockwise;
+#         negative values cause them to be rotated clockwise. Zero means all the
+#         polygons end up the same size on top of each other.
+#     radius
+#         the starting radius for the outermost polygon.
 #
 # A colour specification can take the following forms:
 #     * a colour name from the list in /usr/share/X11/rgb.txt
@@ -183,7 +218,7 @@
 #
 # External program needed: ImageMagick for on-screen display of Cairo-generated PNG images.
 #
-# Copyright 2014, 2016 by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>.
+# Copyright 2014, 2016, 2019 by Lawrence D'Oliveiro <ldo@geek-central.gen.nz>.
 # Licensed under CC-BY-SA <http://creativecommons.org/licenses/by-sa/4.0/>.
 #-
 
