@@ -225,8 +225,16 @@
 import sys
 import math
 from fractions import \
-    Fraction, \
-    gcd
+    Fraction
+try :
+    # Python 3.5 and later
+    from math import \
+        gcd
+except ImportError :
+    # pre-Python 3.5
+    from fractions import \
+        gcd
+#end try
 import subprocess
 import colorsys
 import qahirah as qah
