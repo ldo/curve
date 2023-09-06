@@ -402,7 +402,7 @@ class Drawer :
 
 class CairoDrawer(Drawer) :
     "does drawing using Cairo graphics <http://cairographics.org/> via the" \
-    " Qahirah wrapper <https://github.com/ldo/qahirah>."
+    " Qahirah wrapper <https://gitlab.com/ldo/qahirah>."
 
     def __init__(self) :
         self.size = None
